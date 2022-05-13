@@ -4,18 +4,15 @@
 #include "arch/ts7200.h"
 #include "lib/bwio.h"
 
-#ifndef NDEBUG
-#define assert(condition)                                                   \
-  {                                                                         \
-    if (!(condition)) {                                                     \
-      bwprintf(COM2,                                                        \
-               "\033[31mAssertion failed at %s:%d inside %s\n\rCondition: " \
-               "%s\n\r\033[0m",                                             \
-               __FILE__, __LINE__, __FUNCTION__, #condition);               \
-    }                                                                       \
-  }
+#ifdef NDEBUG /* required by ANSI standard */
+#define assert(cond) ((void)0)
 #else
-#define assert(condition) (condition)
+#define assert(cond) \
+  ((cond) ? (void)0  \
+          : __assert_func(__FILE__, __LINE__, __PRETTY_FUNCTION__, #cond))
 #endif
 
-#endif
+void __assert_func(const char* file, int line, const char* func,
+                   const char* cond);
+
+#endif  // KERN_LIB_ASSERT_H_

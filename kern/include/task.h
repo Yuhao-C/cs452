@@ -1,7 +1,7 @@
 #ifndef KERN_TASK_H_
 #define KERN_TASK_H_
 
-typedef unsigned int addr_t;
+#include "common.h"
 
 class TaskDescriptor {
   enum class State {

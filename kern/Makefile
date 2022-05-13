@@ -34,7 +34,7 @@ ARFLAGS = crs
 LDFLAGS = -static -e main -nmagic -T linker.ld -L ./build/lib -L . -L $(XLIBDIR2) -L $(XLIBDIR1) 
 
 # all: libnwio.a main.elf
-all: build build/lib/libbwio.a build/bin/main.elf install
+all: build build/lib/libklib.a build/bin/main.elf install
 
 build:
 	mkdir -p build && mkdir -p build/lib && mkdir -p build/bin
@@ -45,17 +45,29 @@ build/bwio.s: lib/bwio.c include/lib/bwio.h
 build/bwio.o: build/bwio.s
 	$(AS) $(ASFLAGS) -o $@ $<
 
-build/lib/libbwio.a: build/bwio.o
-	$(AR) $(ARFLAGS) $@ $<
+build/assert.s: lib/assert.cc include/lib/assert.h
+	$(CXX) -S $(CXXFLAGS) -o $@ $<
 
-build/main.s: startup/main.cc include/lib/assert.h
+build/assert.o: build/assert.s
+	$(AS) $(ASFLAGS) -o $@ $<
+
+build/sys.s: lib/sys.cc include/lib/sys.h
+	$(CXX) -S $(CXXFLAGS) -o $@ $<
+
+build/sys.o: build/sys.s
+	$(AS) $(ASFLAGS) -o $@ $<
+
+build/lib/libklib.a: build/bwio.o build/assert.o build/sys.o
+	$(AR) $(ARFLAGS) $@ $^
+
+build/main.s: startup/main.cc
 	$(CXX) -S $(CXXFLAGS) -o $@ $<
 
 build/main.o: build/main.s
 	$(AS) $(ASFLAGS) -o $@ $<
 
-build/bin/main.elf: build/main.o
-	$(LD) $(LDFLAGS) -o $@ $< -lbwio -lstdc++ -lc -lgcc
+build/bin/main.elf: build/main.o build/lib/libklib.a
+	$(LD) $(LDFLAGS) -o $@ $< -lklib -lstdc++ -lc -lgcc
 
 clean:
 	-rm -rf build/
