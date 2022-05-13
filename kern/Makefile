@@ -34,10 +34,16 @@ ARFLAGS = crs
 LDFLAGS = -static -e main -nmagic -T linker.ld -L ./build/lib -L . -L $(XLIBDIR2) -L $(XLIBDIR1) 
 
 # all: libnwio.a main.elf
-all: build build/lib/libklib.a build/bin/main.elf install
+all: build build/lib/libklib.a build/bin/main.elf build/task.o install
 
 build:
 	mkdir -p build && mkdir -p build/lib && mkdir -p build/bin
+
+build/task.s: task.cc include/task.h
+	$(CXX) -S $(CXXFLAGS) -o $@ $<
+
+build/task.o: build/task.s
+	$(AS) $(ASFLAGS) -o $@ $<
 
 build/bwio.s: lib/bwio.c include/lib/bwio.h
 	$(CXX) -S $(CXXFLAGS) -o $@ $<

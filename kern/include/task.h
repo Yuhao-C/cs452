@@ -23,6 +23,13 @@ class TaskDescriptor {
   addr_t stackPtr;
 };
 
+union TDEntry {
+  TaskDescriptor td;
+  TDEntry *nextFree;
+};
+
+void taskBootstrap();
+
 int create(int priority, void (*function)());
 
 int myTid();
