@@ -39,7 +39,7 @@ all: build build/lib/libbwio.a build/bin/main.elf install
 build:
 	mkdir -p build && mkdir -p build/lib && mkdir -p build/bin
 
-build/bwio.s: lib/bwio.c
+build/bwio.s: lib/bwio.c include/lib/bwio.h
 	$(CXX) -S $(CXXFLAGS) -o $@ $<
 
 build/bwio.o: build/bwio.s
@@ -48,7 +48,7 @@ build/bwio.o: build/bwio.s
 build/lib/libbwio.a: build/bwio.o
 	$(AR) $(ARFLAGS) $@ $<
 
-build/main.s: startup/main.cc
+build/main.s: startup/main.cc include/lib/assert.h
 	$(CXX) -S $(CXXFLAGS) -o $@ $<
 
 build/main.o: build/main.s
