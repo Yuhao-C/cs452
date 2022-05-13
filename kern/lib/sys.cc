@@ -2,7 +2,7 @@
 
 addr_t exitAddr;
 
-void exit() {
+void sysExit() {
   asm("mov lr, %[value]\n\t"
       "bx lr"
       :
