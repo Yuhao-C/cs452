@@ -1,0 +1,17 @@
+{
+  "makefile.makefilePath": "kern/Makefile",
+  "makefile.makeDirectory": "kern",
+  "files.associations": {
+    "bwio.h": "c",
+    "ts7200.h": "c"
+  },
+  "makefile.dryrunSwitches": [
+    "--always-make",
+    "--keep-going",
+    "--print-directory",
+  ],
+  "makefile.makePath": "",
+  "makefile.configureAfterCommand": true,
+  "makefile.configureOnEdit": true,
+  "makefile.configureOnOpen": true
+}
