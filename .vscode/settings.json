@@ -13,5 +13,9 @@
   "makefile.makePath": "",
   "makefile.configureAfterCommand": true,
   "makefile.configureOnEdit": true,
-  "makefile.configureOnOpen": true
+  "makefile.configureOnOpen": true,
+  "cSpell.words": [
+    "CPSR",
+    "spsr"
+  ]
 }

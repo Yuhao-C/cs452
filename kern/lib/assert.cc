@@ -13,5 +13,5 @@ void __assert_func(const char* file, int line, const char* func,
            "Condition: %s\n\r"
            "\033[0m",
            file, line, func, cond);
-  sysExit();
+  kExit();
 }

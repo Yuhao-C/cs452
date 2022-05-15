@@ -34,7 +34,7 @@ ARFLAGS = crs
 LDFLAGS = -static -e main -nmagic -T linker.ld -L ./build/lib -L . -L $(XLIBDIR2) -L $(XLIBDIR1) 
 
 # all: libnwio.a main.elf
-all: build build/lib/libklib.a build/bin/main.elf build/task.o install
+all: build build/lib/libklib.a build/bin/main.elf build/task.o build/priority_queues.o build/task_descriptor.o install
 
 build:
 	mkdir -p build && mkdir -p build/lib && mkdir -p build/bin
@@ -43,6 +43,18 @@ build/task.s: task.cc include/task.h
 	$(CXX) -S $(CXXFLAGS) -o $@ $<
 
 build/task.o: build/task.s
+	$(AS) $(ASFLAGS) -o $@ $<
+
+build/priority_queues.s: task/priority_queues.cc include/task_private.h
+	$(CXX) -S $(CXXFLAGS) -o $@ $<
+
+build/priority_queues.o: build/priority_queues.s
+	$(AS) $(ASFLAGS) -o $@ $<
+
+build/task_descriptor.s: task/task_descriptor.cc include/task_private.h
+	$(CXX) -S $(CXXFLAGS) -o $@ $<
+
+build/task_descriptor.o: build/task_descriptor.s
 	$(AS) $(ASFLAGS) -o $@ $<
 
 build/bwio.s: lib/bwio.c include/lib/bwio.h

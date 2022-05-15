@@ -5,6 +5,6 @@
 
 extern addr_t exitAddr;
 
-void sysExit();
+void kExit();
 
 #endif  // KERN_LIB_SYS_H_
