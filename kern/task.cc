@@ -19,6 +19,10 @@ void taskBootstrap() {
   priorityQueues = PriorityQueues();
 }
 
+int myTid() { return curTask->tid; }
+
+int myParentTid() { return curTask->parent->tid; }
+
 void yield() { taskSwitch(TaskDescriptor::State::kReady); }
 
 void exit() { taskSwitch(TaskDescriptor::State::kZombie); }
@@ -46,6 +50,7 @@ void taskSwitch(TaskDescriptor::State newState) {
 
 void switchFrame(addr_t spNew, addr_t *spOld) {
   asm(R"(
+    nop
     sub sp, sp, #40
     str r4, [sp, #0]
     mrs r4, CPSR
@@ -78,5 +83,6 @@ void switchFrame(addr_t spNew, addr_t *spOld) {
     nop
 
     add sp, sp, #40
+    nop
   )");
 }
