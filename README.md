@@ -1,4 +1,4 @@
-# CS452 Kernel Part 1
+# CS452 Kerne
 
 ## Group Member
 
