@@ -11,9 +11,9 @@ handleSWI:
 	str		lr, [sp, #0]
 
 	mov		r0, sp 
-  ldr		r1, [lr, #-4]
+	ldr		r1, [lr, #-4]
 	add		sp, sp, #68
-  bl		enterKernel
+	bl		enterKernel
 
 	.text
 	.align 2
