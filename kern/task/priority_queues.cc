@@ -1,5 +1,5 @@
+#include "kern/task.h"
 #include "lib/assert.h"
-#include "task_private.h"
 
 PriorityQueues::PriorityQueues() {
   for (int i = 0; i < NUM_PRIORITY_LEVELS; ++i) {

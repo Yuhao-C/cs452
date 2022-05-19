@@ -1,9 +1,10 @@
-#include "lib/sys.h"
+#include "kern/sys.h"
 
 addr_t exitAddr;
 
 void kExit() {
-  asm("mov lr, %[value]\n\t"
+  asm volatile(
+      "mov lr, %[value]\n\t"
       "bx lr"
       :
       : [value] "r"(exitAddr)

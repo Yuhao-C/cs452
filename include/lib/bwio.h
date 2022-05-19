@@ -1,6 +1,5 @@
-/*
- * bwio.h
- */
+#ifndef KERN_LIB_BWIO_H_
+#define KERN_LIB_BWIO_H_
 
 typedef const char *va_list;
 
@@ -37,3 +36,5 @@ int bwputr(int channel, unsigned int reg);
 void bwputw(int channel, int n, char fc, const char *bf);
 
 void bwprintf(int channel, const char *format, ...);
+
+#endif  // KERN_LIB_BWIO_H_

@@ -1,6 +1,6 @@
 {
-  "makefile.makefilePath": "kern/Makefile",
-  "makefile.makeDirectory": "kern",
+  "makefile.makefilePath": "Makefile",
+  "makefile.makeDirectory": ".",
   "files.associations": {
     "bwio.h": "c",
     "ts7200.h": "c"
@@ -15,7 +15,10 @@
   "makefile.configureOnEdit": true,
   "makefile.configureOnOpen": true,
   "cSpell.words": [
+    "bwprintf",
+    "bwputstr",
     "CPSR",
-    "spsr"
+    "spsr",
+    "Trapframe"
   ]
 }

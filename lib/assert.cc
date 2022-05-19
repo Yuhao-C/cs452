@@ -1,8 +1,7 @@
 #include "lib/assert.h"
 
-#include "arch/ts7200.h"
+#include "kern/sys.h"
 #include "lib/bwio.h"
-#include "lib/sys.h"
 
 void __assert_func(const char* file, int line, const char* func,
                    const char* cond) {

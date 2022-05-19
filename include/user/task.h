@@ -1,8 +1,7 @@
-#ifndef KERN_TASK_H_
-#define KERN_TASK_H_
+#ifndef USER_TASK_H_
+#define USER_TASK_H_
 
-#include "common.h"
-
+extern "C" {
 int create(int priority, void (*function)());
 
 int myTid();
@@ -12,7 +11,5 @@ int myParentTid();
 void yield();
 
 void exit();
-
-void destroy();
-
-#endif  // KERN_TASK_H_
+}
+#endif  // USER_TASK_H_

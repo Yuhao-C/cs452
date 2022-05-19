@@ -1,15 +1,12 @@
-#include "task_private.h"
+#include "kern/task.h"
 
-TaskDescriptor::TaskDescriptor(TaskDescriptor* parent, int priority)
-    : parent{parent},
+TaskDescriptor::TaskDescriptor(TaskDescriptor* parent, int priority, int tid)
+    : tid{tid},
+      parent{parent},
       priority{priority},
       nextReady{nullptr},
       nextSend{nullptr},
       state{State::kReady},
-      stackPtr{0},
-      retVal{0},
-      spsr{0} {
-  tid = tidCounter++;
-}
+      retVal{0} {}
 
-TaskDescriptor::TaskDescriptor() : TaskDescriptor{nullptr, -1} {}
+TaskDescriptor::TaskDescriptor() : TaskDescriptor{nullptr, -1, -1} {}

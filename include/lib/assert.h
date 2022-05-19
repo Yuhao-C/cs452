@@ -1,9 +1,6 @@
 #ifndef KERN_LIB_ASSERT_H_
 #define KERN_LIB_ASSERT_H_
 
-#include "arch/ts7200.h"
-#include "lib/bwio.h"
-
 #ifdef NDEBUG /* required by ANSI standard */
 #define assert(cond) ((void)0)
 #else

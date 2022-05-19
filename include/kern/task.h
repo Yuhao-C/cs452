@@ -1,12 +1,14 @@
-#ifndef KERN_TASK_PRIVATE_H_
-#define KERN_TASK_PRIVATE_H_
+#ifndef KERN_TASK_H_
+#define KERN_TASK_H_
 
-#include "common.h"
+#include "syscall.h"
 
 #define NUM_TASKS 64
 #define NUM_PRIORITY_LEVELS 8
+#define USER_STACK_SIZE 0x20000
 
 extern int tidCounter;
+extern struct TaskDescriptor *curTask;
 
 struct TaskDescriptor {
   enum class State {
@@ -25,11 +27,10 @@ struct TaskDescriptor {
   TaskDescriptor *nextReady;
   TaskDescriptor *nextSend;
   State state;
-  addr_t stackPtr;
   int retVal;
-  unsigned int spsr;  // TODO: somehow determine save this or save cpsr
+  Trapframe tf;
 
-  TaskDescriptor(TaskDescriptor *parent, int priority);
+  TaskDescriptor(TaskDescriptor *parent, int priority, int tid);
   TaskDescriptor();
 };
 
@@ -47,8 +48,16 @@ class PriorityQueues {
 
 void taskBootstrap();
 
-void taskSwitch(TaskDescriptor::State newState);
+void taskStart(void (*fn)());
 
-void switchFrame(addr_t spNew, addr_t *spOld);
+void taskCreate(Trapframe *tf);
 
-#endif  // KERN_TASK_PRIVATE_H_
+void taskYield();
+
+void taskExit();
+
+int taskActivate(TaskDescriptor *task);
+
+TaskDescriptor *taskSchedule();
+
+#endif  // KERN_TASK_H_
