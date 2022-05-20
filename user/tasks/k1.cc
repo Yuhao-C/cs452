@@ -4,8 +4,8 @@
 #include "user/task.h"
 
 void k1() {
-  bwprintf(COM2, "Task id: %u, Parent task id: %u\n\r", myTid(), myTid());
+  bwprintf(COM2, "Task id: %d, Parent task id: %d\n\r", myTid(), myParentTid());
   yield();
-  bwprintf(COM2, "Task id: %u, Parent task id: %u\n\r", myTid(), myTid());
+  bwprintf(COM2, "Task id: %d, Parent task id: %d\n\r", myTid(), myParentTid());
   exit();
 }
