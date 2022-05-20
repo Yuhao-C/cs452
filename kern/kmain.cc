@@ -25,14 +25,9 @@ int main() {
 
   while (true) {
     TaskDescriptor *nextTask = taskSchedule();
-    bwprintf(COM2, "%d, %x, %d\n\r", nextTask->tid, nextTask->parent,
-             nextTask->priority);
+    if (!nextTask) break;
     int request = taskActivate(nextTask);
     (void)request;
-    break;
-    // if (!nextTask) break;
-    // int request = taskActivate(nextTask);
-    // (void)request;
     // handleRequest(request);
   }
   return 0;
