@@ -1,6 +1,8 @@
 #include "kern/syscall.h"
 
 #include "kern/task.h"
+#include "lib/assert.h"
+#include "lib/bwio.h"
 
 extern "C" void enterKernel(Trapframe *tf, unsigned int code) {
   curTask->tf = *tf;
@@ -22,6 +24,13 @@ extern "C" void enterKernel(Trapframe *tf, unsigned int code) {
     case SYS_EXIT:
       taskExit();
       break;
+    default:
+      bwprintf(COM2,
+               "\033[31m"
+               "FATAL: unknown syscall code: %u\n\r"
+               "\033[0m",
+               code);
+      assert(false);
   }
 }
 
