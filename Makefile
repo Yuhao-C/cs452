@@ -14,7 +14,7 @@ AS = $(XBINDIR)/arm-none-eabi-as
 LD = $(XBINDIR)/arm-none-eabi-ld
 
 # C preprocessor flags
-CPPFLAGS = -I./include -I./user/include
+CPPFLAGS = -I./include -I./user/include -MMD -MP
 
 # C++ compiler flags
 # -g: include debug information for gdb
@@ -36,43 +36,23 @@ ARFLAGS = crs
 # -T: use linker script
 LDFLAGS = -static -e main -nmagic -T linker.ld -L ./lib -L $(XLIBDIR2) -L $(XLIBDIR1) 
 
-LDLIBS = -lklib -lstdc++ -lc -lgcc
+LDLIBS = -lstdc++ -lc -lgcc
 
-all: lib/libklib.a kern/kmain.elf
+CXXSRC := $(shell find . -name '*.cc')
+ASMSRC := $(shell find . -name '*.S')
 
-kern/task/task_kern.o: kern/task/task_kern.cc include/kern/task.h
+all: kern/kmain.elf
 
-kern/task/task_user.o: kern/task/task_user.S include/user/task.h
-
-kern/syscall/syscall.o: kern/syscall/syscall.cc include/kern/syscall.h
-
-kern/syscall/exception.o: kern/syscall/exception.S
-
-kern/task/priority_queues.o: kern/task/priority_queues.cc include/kern/task.h
-
-kern/task/task_descriptor.o: kern/task/task_descriptor.cc include/kern/task.h
-
-lib/bwio.o: lib/bwio.cc include/lib/bwio.h
-
-lib/assert.o: lib/assert.cc include/lib/assert.h
-
-kern/lib/sys.o: kern/lib/sys.cc include/kern/sys.h
-
-lib/libklib.a: lib/bwio.o lib/assert.o kern/lib/sys.o
-	$(AR) $(ARFLAGS) $@ $^
-
-kern/kmain.o: kern/kmain.cc
-
-user/tasks/k1.o: user/tasks/k1.cc user/include/k1.h
-
-user/boot.o: user/boot.cc user/include/boot.h
-
-kern/kmain.elf: kern/kmain.o kern/task/task_kern.o kern/task/task_user.o kern/syscall/syscall.o kern/syscall/exception.o kern/task/priority_queues.o kern/task/task_descriptor.o user/boot.o user/tasks/k1.o
+kern/kmain.elf: $(CXXSRC:%.cc=%.o) $(ASMSRC:%.S=%.o)
 	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+-include $(CXXSRC:%.cc=%.d) $(ASMSRC:%.S=%.d)
 
 .PHONY: clean
 clean:
-	-rm -rf build/ kern/*/*.o kern/*.o lib/*.o user/*/*.o user/*.o kern/*.elf
+	-find . -name '*.o' -delete
+	-find . -name '*.d' -delete
+	-find . -name '*.elf' -delete
 
 .PHONY: install
 install: all

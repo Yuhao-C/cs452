@@ -2,6 +2,14 @@ SECTIONS {
   /* below 0x44f88 reserved for/by RedBoot */
   . = 0x100000;
 
+  /* mark text section */
+  __text_start = ADDR(.text);
+  __text_end = ADDR(.text) + SIZEOF(.text);
+
+  /* mark data section */
+  __data_start = ADDR(.data);
+  __data_end = ADDR(.data) + SIZEOF(.data);
+
   /* mark BSS segment */
   __bss_start = ADDR(.bss);
   __bss_end   = ADDR(.bss) + SIZEOF(.bss);

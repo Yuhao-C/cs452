@@ -5,3 +5,4 @@ build/
 *.s
 *.elf
 *.a
+*.d
