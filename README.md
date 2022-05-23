@@ -8,6 +8,8 @@
 ## Setup
 
 ```bash
+git clone https://git.uwaterloo.ca/y627chen/cs452.git
+cd cs452
 make
 make install # transfer kmain.elf to tftp server
 ```
