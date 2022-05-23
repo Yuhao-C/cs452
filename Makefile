@@ -13,15 +13,17 @@ AR = $(XBINDIR)/arm-none-eabi-ar
 AS = $(XBINDIR)/arm-none-eabi-as
 LD = $(XBINDIR)/arm-none-eabi-ld
 
+# C preprocessor flags
+CPPFLAGS = -I./include -I./user/include
+
+# C++ compiler flags
 # -g: include debug information for gdb
 # -S: only compile and emit assembly
 # -fPIC: emit position-independent code
 # -Wall: report all warnings
 # -mcpu=arm920t: generate code for the 920t architecture
 # -msoft-float: no FP co-processor
-CFLAGS = -g -fPIC -Wall -mcpu=arm920t -msoft-float -I./include -I./user/include
-
-CXXFLAGS = $(CFLAGS) -fno-rtti -fno-exceptions
+CXXFLAGS = -g -fPIC -Wall -mcpu=arm920t -msoft-float -fno-rtti -fno-exceptions
 
 # c: create archive, if necessary
 # r: insert with replacement
@@ -32,90 +34,50 @@ ARFLAGS = crs
 # -e: set entry point
 # -nmagic: no page alignment
 # -T: use linker script
-LDFLAGS = -static -e main -nmagic -T linker.ld -L ./build/lib -L . -L $(XLIBDIR2) -L $(XLIBDIR1) 
+LDFLAGS = -static -e main -nmagic -T linker.ld -L ./lib -L $(XLIBDIR2) -L $(XLIBDIR1) 
 
-all: build build/lib/libklib.a build/bin/kmain.elf install
+LDLIBS = -lklib -lstdc++ -lc -lgcc
 
-build:
-	mkdir -p build
-	mkdir -p build/lib
-	mkdir -p build/bin
-	mkdir -p build/user
+all: lib/libklib.a kern/kmain.elf
 
-build/task_kern.s: kern/task/task_kern.cc include/kern/task.h
-	$(CXX) -S $(CXXFLAGS) -o $@ $<
+kern/task/task_kern.o: kern/task/task_kern.cc include/kern/task.h
 
-build/task_kern.o: build/task_kern.s
-	$(AS) $(ASFLAGS) -o $@ $<
+kern/task/task_user.o: kern/task/task_user.S include/user/task.h
 
-build/task_user.o: kern/task/task_user.S include/user/task.h
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
+kern/syscall/syscall.o: kern/syscall/syscall.cc include/kern/syscall.h
 
-build/syscall.s: kern/syscall/syscall.cc include/kern/syscall.h
-	$(CXX) -S $(CXXFLAGS) -o $@ $<
+kern/syscall/exception.o: kern/syscall/exception.S
 
-build/syscall.o: build/syscall.s
-	$(AS) $(ASFLAGS) -o $@ $<
+kern/task/priority_queues.o: kern/task/priority_queues.cc include/kern/task.h
 
-build/exception.o: kern/syscall/exception.S
-	$(AS) $(ASFLAGS) -o $@ $<
+kern/task/task_descriptor.o: kern/task/task_descriptor.cc include/kern/task.h
 
-build/priority_queues.s: kern/task/priority_queues.cc include/kern/task.h
-	$(CXX) -S $(CXXFLAGS) -o $@ $<
+lib/bwio.o: lib/bwio.cc include/lib/bwio.h
 
-build/priority_queues.o: build/priority_queues.s
-	$(AS) $(ASFLAGS) -o $@ $<
+lib/assert.o: lib/assert.cc include/lib/assert.h
 
-build/task_descriptor.s: kern/task/task_descriptor.cc include/kern/task.h
-	$(CXX) -S $(CXXFLAGS) -o $@ $<
+kern/lib/sys.o: kern/lib/sys.cc include/kern/sys.h
 
-build/task_descriptor.o: build/task_descriptor.s
-	$(AS) $(ASFLAGS) -o $@ $<
-
-build/bwio.s: lib/bwio.c include/lib/bwio.h
-	$(CXX) -S $(CXXFLAGS) -o $@ $<
-
-build/bwio.o: build/bwio.s
-	$(AS) $(ASFLAGS) -o $@ $<
-
-build/assert.s: lib/assert.cc include/lib/assert.h
-	$(CXX) -S $(CXXFLAGS) -o $@ $<
-
-build/assert.o: build/assert.s
-	$(AS) $(ASFLAGS) -o $@ $<
-
-build/sys.s: kern/lib/sys.cc include/kern/sys.h
-	$(CXX) -S $(CXXFLAGS) -o $@ $<
-
-build/sys.o: build/sys.s
-	$(AS) $(ASFLAGS) -o $@ $<
-
-build/lib/libklib.a: build/bwio.o build/assert.o build/sys.o
+lib/libklib.a: lib/bwio.o lib/assert.o kern/lib/sys.o
 	$(AR) $(ARFLAGS) $@ $^
 
-build/kmain.s: kern/kmain.cc
-	$(CXX) -S $(CXXFLAGS) -o $@ $<
+kern/kmain.o: kern/kmain.cc
 
-build/kmain.o: build/kmain.s
-	$(AS) $(ASFLAGS) -o $@ $<
+user/tasks/k1.o: user/tasks/k1.cc user/include/k1.h
 
-build/user/k1.s: user/tasks/k1.cc user/include/k1.h
-	$(CXX) -S $(CXXFLAGS) -o $@ $<
+user/boot.o: user/boot.cc user/include/boot.h
 
-build/user/k1.o: build/user/k1.s
-	$(AS) $(ASFLAGS) -o $@ $<
+kern/kmain.elf: kern/kmain.o kern/task/task_kern.o kern/task/task_user.o kern/syscall/syscall.o kern/syscall/exception.o kern/task/priority_queues.o kern/task/task_descriptor.o user/boot.o user/tasks/k1.o
+	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-build/user/boot.s: user/boot.cc user/include/boot.h
-	$(CXX) -S $(CXXFLAGS) -o $@ $<
-
-build/user/boot.o: build/user/boot.s
-	$(AS) $(ASFLAGS) -o $@ $<
-
-build/bin/kmain.elf: build/kmain.o build/task_kern.o build/task_user.o build/syscall.o build/exception.o build/priority_queues.o build/task_descriptor.o build/user/boot.o build/user/k1.o
-	$(LD) $(LDFLAGS) -o $@ $^ -lklib -lstdc++ -lc -lgcc
-
+.PHONY: clean
 clean:
-	-rm -rf build/
+	-rm -rf build/ kern/*/*.o kern/*.o lib/*.o user/*/*.o user/*.o kern/*.elf
 
-install:
-	cp build/bin/kmain.elf /u/cs452/tftp/ARM/$(USER) && chmod o+r /u/cs452/tftp/ARM/$(USER)/kmain.elf
+.PHONY: install
+install: all
+	install kern/kmain.elf /u/cs452/tftp/ARM/$(USER)
+
+.PHONY: uninstall
+uninstall:
+	-rm /u/cs452/tftp/ARM/$(USER)/kmain.elf
