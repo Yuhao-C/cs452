@@ -5,7 +5,7 @@
 
 #define NUM_TASKS 64
 #define NUM_PRIORITY_LEVELS 8
-#define USER_STACK_SIZE 0x20000
+#define USER_STACK_SIZE 0x20000  // 128 KB
 
 struct TaskDescriptor {
   enum class State {
