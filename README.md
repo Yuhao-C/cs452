@@ -16,45 +16,45 @@ make install # transfer kmain.elf to tftp server
 
 ## File Structure
 
-```c
+```bash
 cs452/
 ├── include/
 │   ├── kern/
 │   │   ├── arch/
-│   │   │   └── ts7200.h // ts7200 registers definition
-│   │   ├── common.h  // declare common type and helper
-│   │   ├── kmem.h    // declare constants for memory sections
-│   │   ├── sys.h     // declare kExit (exit kernel)
-│   │   ├── syscall_code.h // define syscall codes
-│   │   ├── syscall.h // declare Trapframe and syscall functions
-│   │   └── task.h    // declare kernel task handle
+│   │   │   └── ts7200.h # ts7200 registers definition
+│   │   ├── common.h  # declare common type and helper
+│   │   ├── kmem.h    # declare constants for memory sections
+│   │   ├── sys.h     # declare kExit (exit kernel)
+│   │   ├── syscall_code.h # define syscall codes
+│   │   ├── syscall.h # declare Trapframe and syscall functions
+│   │   └── task.h    # declare kernel task handle
 │   ├── lib/
-│   │   ├── assert.h // declare assert utility
-│   │   └── bwio.h   // declare busy-wait I/O routines
+│   │   ├── assert.h # declare assert utility
+│   │   └── bwio.h   # declare busy-wait I/O routines
 │   └── user/
-│       └── task.h // declare user task interface
+│       └── task.h # declare user task interface
 ├── kern/
 │   ├── lib/
-│   │   └── sys.cc // define kExit (exit kernel)
+│   │   └── sys.cc # define kExit (exit kernel)
 │   ├── syscall/
-│   │   ├── exception.S // save and restore user and kernel stack
-│   │   └── syscall.cc  // define enterKernel and leaveKernel
+│   │   ├── exception.S # save and restore user and kernel stack
+│   │   └── syscall.cc  # define enterKernel and leaveKernel
 │   ├── task/
-│   │   ├── priority_queues.cc // define PriorityQueues class
-│   │   ├── task_descriptor.cc // define TaskDescriptor class
-│   │   ├── task_kern.cc       // define kernel task handler
-│   │   └── task_user.S        // define user task handler
-│   └── kmain.cc  // kernel entry
+│   │   ├── priority_queues.cc # define PriorityQueues class
+│   │   ├── task_descriptor.cc # define TaskDescriptor class
+│   │   ├── task_kern.cc       # define kernel task handler
+│   │   └── task_user.S        # define user task handler
+│   └── kmain.cc  # kernel entry
 ├── lib/
-│   ├── assert.cc // define assert utility
-│   └── bwio.cc   // define busy-wait I/O routines
+│   ├── assert.cc # define assert utility
+│   └── bwio.cc   # define busy-wait I/O routines
 ├── user/
 │   ├── include/
-│   │   ├── boot.h // declare first user task and its priority 
-│   │   └── k1.h   // declare k1 user task
+│   │   ├── boot.h # declare first user task and its priority 
+│   │   └── k1.h   # declare k1 user task
 │   ├── tasks/
-│   │   └── k1.cc  // define k1 user task
-│   └── boot.cc  // define first uesr task
+│   │   └── k1.cc  # define k1 user task
+│   └── boot.cc  # define first uesr task
 ├── .gitignore
 ├── linker.ld
 ├── Makefile
