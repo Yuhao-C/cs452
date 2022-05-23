@@ -16,7 +16,7 @@ make install # transfer kmain.elf to tftp server
 
 ## File Structure
 
-```bash
+```sh
 cs452/
 ├── include/
 │   ├── kern/
