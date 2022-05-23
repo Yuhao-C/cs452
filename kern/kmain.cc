@@ -10,8 +10,8 @@ int main() {
   // store main's return address for exiting the kernel
   addr_t lr;
   asm volatile("mov %r0, lr" : "=r"(lr));
-  exitAddr = lr;
 
+  sysBootstrap(lr);
   taskBootstrap();
 
   // add first user task

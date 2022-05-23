@@ -3,7 +3,7 @@
 
 #include "kern/common.h"
 
-extern addr_t exitAddr;
+void sysBootstrap(addr_t lr);
 
 void kExit();
 
