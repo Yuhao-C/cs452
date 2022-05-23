@@ -16,7 +16,7 @@ make install # transfer kmain.elf to tftp server
 
 ## File Structure
 
-```C#
+```csharp
 cs452/
 ├── include/
 │   ├── kern/
