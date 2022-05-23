@@ -7,9 +7,6 @@
 #define NUM_PRIORITY_LEVELS 8
 #define USER_STACK_SIZE 0x20000
 
-extern int tidCounter;
-extern struct TaskDescriptor *curTask;
-
 struct TaskDescriptor {
   enum class State {
     kActive = 0,
@@ -46,13 +43,15 @@ class PriorityQueues {
   bool isEmpty(int priority);
 };
 
+extern int tidCounter;
+extern TaskDescriptor *curTask;
+extern PriorityQueues readyQueues;
+
 void taskBootstrap();
 
 void taskStart(void (*fn)());
 
 void taskCreate(Trapframe *tf);
-
-void taskYield();
 
 void taskExit();
 

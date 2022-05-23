@@ -8,7 +8,7 @@
 TaskDescriptor tasks[NUM_TASKS];
 TaskDescriptor *curTask;
 
-PriorityQueues priorityQueues;
+PriorityQueues readyQueues;
 
 int tidCounter;
 addr_t userStack;
@@ -20,7 +20,7 @@ void taskBootstrap() {
   curTask = nullptr;
   tidCounter = 0;
   userStack = 0x1000000;
-  priorityQueues = PriorityQueues();
+  readyQueues = PriorityQueues();
   addr_t *swiHandler = (addr_t *)0x28;
   *swiHandler = (addr_t)handleSWI;
 }
@@ -49,17 +49,12 @@ void taskCreate(Trapframe *tf) {
   task.tf.r13 = userStack;  // stack pointer
   task.tf.lrSVC = (unsigned int)taskStart;
   task.tf.spsr = 0b10000;
-  priorityQueues.enqueue(&task);
+  readyQueues.enqueue(&task);
 
   tf->r0 = task.tid;  // return tid in r0
 
   ++tidCounter;
   userStack -= USER_STACK_SIZE;
-}
-
-void taskYield() {
-  curTask->state = TaskDescriptor::State::kReady;
-  priorityQueues.enqueue(curTask);
 }
 
 void taskExit() { curTask->state = TaskDescriptor::State::kZombie; }
@@ -73,4 +68,4 @@ int taskActivate(TaskDescriptor *task) {
   return 0;
 }
 
-TaskDescriptor *taskSchedule() { return priorityQueues.dequeue(); }
+TaskDescriptor *taskSchedule() { return readyQueues.dequeue(); }

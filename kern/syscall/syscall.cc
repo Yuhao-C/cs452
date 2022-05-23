@@ -13,17 +13,17 @@ extern "C" void enterKernel(Trapframe *tf, unsigned int code) {
       taskCreate(&curTask->tf);
       break;
     case SYS_TID:
-      tf->r0 = curTask->tid;
+      curTask->tf.r0 = curTask->tid;
       break;
     case SYS_PARENT_TID:
-      tf->r0 = curTask->parent ? curTask->parent->tid : -1;
+      curTask->tf.r0 = curTask->parent ? curTask->parent->tid : -1;
       break;
     case SYS_YIELD:
-      taskYield();
+      // yield is default in every syscall
       break;
     case SYS_EXIT:
       taskExit();
-      break;
+      return;
     default:
       bwprintf(COM2,
                "\033[31m"
@@ -32,6 +32,10 @@ extern "C" void enterKernel(Trapframe *tf, unsigned int code) {
                code);
       assert(false);
   }
+
+  // task yield
+  curTask->state = TaskDescriptor::State::kReady;
+  readyQueues.enqueue(curTask);
 }
 
 void leaveKernel() { userMode(&curTask->tf); }

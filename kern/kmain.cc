@@ -7,9 +7,6 @@
 #include "lib/bwio.h"
 
 int main() {
-  // int a = 0;
-  // bwprintf(COM2, "%x", &a);
-
   // store main's return address for exiting the kernel
   addr_t lr;
   asm volatile("mov %r0, lr" : "=r"(lr));

@@ -5,8 +5,9 @@
 #include "user/task.h"
 
 void boot() {
-  for (int i = 0; i < 8; i += 2) {
-    int tid = create(i, k1);
+  int priority[] = {0, 0, 2, 2};
+  for (int p : priority) {
+    int tid = create(p, k1);
     bwprintf(COM2, "Created: %d\n\r", tid);
   }
   bwputstr(COM2, "FirstUserTask: exiting\n\r");

@@ -12,14 +12,20 @@ handleSWI:
 
 	mov		r0, sp 
 	ldr		r1, [lr, #-4]
-	add		sp, sp, #68
-	bl		enterKernel
+
+	add		r12, sp, #68
+	ldm		r12, {r4-r11, lr}
+
+	b		enterKernel
 
 	.text
 	.align 2
 	.global userMode
 	.type userMode, %function
 userMode:
+	sub		sp, sp, #36
+	stm		sp, {r4-r11, lr}
+
 	ldr		r4, [r0, #4]
 	ldr		lr, [r0, #0]
 	add		r0, r0, #8
