@@ -57,6 +57,11 @@ void taskCreate(Trapframe *tf) {
   userStack -= USER_STACK_SIZE;
 }
 
+void taskYield() {
+  curTask->state = TaskDescriptor::State::kReady;
+  readyQueues.enqueue(curTask);
+}
+
 void taskExit() { curTask->state = TaskDescriptor::State::kZombie; }
 
 int taskActivate(TaskDescriptor *task) {
@@ -69,3 +74,7 @@ int taskActivate(TaskDescriptor *task) {
 }
 
 TaskDescriptor *taskSchedule() { return readyQueues.dequeue(); }
+
+bool isTidValid(int tid) {
+  return 0 <= tid && tid < NUM_TASKS && tasks[tid].tid != -1;
+}

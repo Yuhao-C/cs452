@@ -1,5 +1,6 @@
 #include "kern/syscall.h"
 
+#include "kern/message.h"
 #include "kern/task.h"
 #include "lib/assert.h"
 #include "lib/bwio.h"
@@ -11,19 +12,31 @@ extern "C" void enterKernel(Trapframe *tf, unsigned int code) {
   switch (code) {
     case SYS_CREATE:
       taskCreate(&curTask->tf);
+      taskYield();
       break;
     case SYS_TID:
       curTask->tf.r0 = curTask->tid;
+      taskYield();
       break;
     case SYS_PARENT_TID:
       curTask->tf.r0 = curTask->parent ? curTask->parent->tid : -1;
+      taskYield();
       break;
     case SYS_YIELD:
-      // yield is default in every syscall
+      taskYield();
       break;
     case SYS_EXIT:
       taskExit();
-      return;
+      break;
+    case SYS_SEND:
+      msgSend(&curTask->tf);
+      break;
+    case SYS_RECEIVE:
+      msgReceive(&curTask->tf);
+      break;
+    case SYS_REPLY:
+      msgReply(&curTask->tf);
+      break;
     default:
       bwprintf(COM2,
                "\033[31m"
@@ -32,10 +45,6 @@ extern "C" void enterKernel(Trapframe *tf, unsigned int code) {
                code);
       assert(false);
   }
-
-  // task yield
-  curTask->state = TaskDescriptor::State::kReady;
-  readyQueues.enqueue(curTask);
 }
 
 void leaveKernel() { userMode(&curTask->tf); }

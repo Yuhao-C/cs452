@@ -23,12 +23,15 @@ struct TaskDescriptor {
   int priority;
   TaskDescriptor *nextReady;
   TaskDescriptor *nextSend;
+  TaskDescriptor *lastSend;
   State state;
   int retVal;
   Trapframe tf;
 
   TaskDescriptor(TaskDescriptor *parent, int priority, int tid);
   TaskDescriptor();
+  void enqueueSender(TaskDescriptor *sender);
+  TaskDescriptor *dequeueSender();
 };
 
 class PriorityQueues {
@@ -44,6 +47,7 @@ class PriorityQueues {
 };
 
 extern int tidCounter;
+extern TaskDescriptor tasks[NUM_TASKS];
 extern TaskDescriptor *curTask;
 extern PriorityQueues readyQueues;
 
@@ -53,10 +57,14 @@ void taskStart(void (*fn)());
 
 void taskCreate(Trapframe *tf);
 
+void taskYield();
+
 void taskExit();
 
 int taskActivate(TaskDescriptor *task);
 
 TaskDescriptor *taskSchedule();
+
+bool isTidValid(int tid);
 
 #endif  // KERN_TASK_H_
