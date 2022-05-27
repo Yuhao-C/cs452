@@ -14,3 +14,5 @@ int hash(const String &s) {
   }
   return h;
 }
+
+int hash(int n) { return n; }

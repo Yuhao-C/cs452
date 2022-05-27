@@ -22,7 +22,9 @@ int main() {
 
   while (true) {
     TaskDescriptor *nextTask = taskSchedule();
-    if (!nextTask) break;
+    if (!nextTask) {
+      break;
+    }
     int request = taskActivate(nextTask);
     (void)request;
     // handleRequest(request);

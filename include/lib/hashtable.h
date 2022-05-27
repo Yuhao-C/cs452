@@ -4,6 +4,7 @@
 #include "lib/string.h"
 
 int hash(const String &s);
+int hash(int n);
 
 template <typename K, typename V, int cap, int bucketSize>
 class HashTable {

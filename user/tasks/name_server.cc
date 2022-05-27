@@ -31,7 +31,6 @@ void nameServer() {
       // who is
       const int *tid = nameTable.get(msg + 1);
       ret = tid ? *tid : -1;
-      bwprintf(COM2, "from nameTable.get: %s\n\r", msg + 1);
       reply(senderTid, &ret, sizeof(int));
     }
   }
