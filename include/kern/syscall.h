@@ -22,6 +22,8 @@ struct Trapframe {
   unsigned int r12;
   unsigned int r13;
   unsigned int r14;
+
+  void print() const;
 };
 
 extern "C" {
