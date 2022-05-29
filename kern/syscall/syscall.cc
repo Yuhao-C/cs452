@@ -43,7 +43,7 @@ extern "C" void enterKernel(Trapframe *tf, unsigned int code) {
                "FATAL: unknown syscall code: %u\n\r"
                "\033[0m",
                code);
-      assert(false);
+      kAssert(false);
   }
 }
 

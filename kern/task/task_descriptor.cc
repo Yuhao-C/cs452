@@ -16,10 +16,10 @@ TaskDescriptor::TaskDescriptor() : TaskDescriptor{nullptr, -1, -1} {}
 void TaskDescriptor::enqueueSender(TaskDescriptor *sender) {
   if (!nextSend) {
     // empty send queue
-    assert(!lastSend);
+    kAssert(!lastSend);
     nextSend = sender;
   } else {
-    assert(lastSend);
+    kAssert(lastSend);
     lastSend->nextSend = sender;
   }
   lastSend = sender;

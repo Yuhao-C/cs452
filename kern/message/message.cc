@@ -60,7 +60,7 @@ void msgReceive(Trapframe *tf) {
 
   if (sender) {
     // sender first
-    assert(sender->state == TaskDescriptor::State::kSendBlocked);
+    kAssert(sender->state == TaskDescriptor::State::kSendBlocked);
     sender->state = TaskDescriptor::State::kReplyBlocked;
     receiver->nextSend = sender->nextSend;
     msgCopy(sender, receiver);
