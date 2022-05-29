@@ -4,15 +4,24 @@
 
 namespace timer {
 
-void load() { *(unsigned int *)(TIMER3_BASE + LDR_OFFSET) = 0xffffffff; }
+void load() {
+  volatile unsigned int *addr = (unsigned int *)(TIMER3_BASE + LDR_OFFSET);
+  *addr = 0xffffffff;
+}
 
-void start() { *(unsigned int *)(TIMER3_BASE + CTRL_OFFSET) = 0b11001000; }
+void start() {
+  volatile unsigned int *addr = (unsigned int *)(TIMER3_BASE + CTRL_OFFSET);
+  *addr = 0b11001000;
+}
 
-void stop() { *(unsigned int *)(TIMER3_BASE + CTRL_OFFSET) &= 0xffffff7f; }
+void stop() {
+  volatile unsigned int *addr = (unsigned int *)(TIMER3_BASE + CTRL_OFFSET);
+  *addr &= 0xffffff7f;
+}
 
 unsigned int getTick() {
-  unsigned int value = *(unsigned int *)(TIMER3_BASE + VAL_OFFSET);
-  return value;
+  volatile unsigned int *addr = (unsigned int *)(TIMER3_BASE + VAL_OFFSET);
+  return *addr;
 }
 
 }  // namespace timer
