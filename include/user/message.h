@@ -14,4 +14,14 @@ int send(int tid, const M &msg, R &reply) {
   return send(tid, &msg, sizeof(M), &reply, sizeof(R));
 }
 
+template <typename M>
+int receive(int &tid, M &msg) {
+  return receive(&tid, &msg, sizeof(M));
+}
+
+template <typename R>
+int reply(int tid, const R &rply) {
+  return reply(tid, &rply, sizeof(R));
+}
+
 #endif  // USER_MESSAGE_H_
