@@ -1,0 +1,36 @@
+[RPS Player 3]: 🙋	Sign Up
+[RPS Player 4]: 🙋	Sign Up
+[RPS Server]: matched [Player 3] and [Player 4]
+[RPS Player 5]: 🙋	Sign Up
+[RPS Player 6]: 🙋	Sign Up
+[RPS Server]: matched [Player 5] and [Player 6]
+[RPS Player 7]: 🙋	Sign Up
+[RPS Player 3]: 👊	Rock
+[RPS Player 4]: 🖐️	Paper
+[RPS Player 5]: 👊	Rock
+[RPS Player 6]: 🖐️	Paper
+[RPS Player 4]: 🥳	Win
+[RPS Player 4]: ✌️	Scissors
+[RPS Player 3]: 😭	Lose
+[RPS Player 3]: 👊	Rock
+[RPS Player 6]: 🥳	Win
+[RPS Player 6]: ✌️	Scissors
+[RPS Player 5]: 😭	Lose
+[RPS Player 5]: 💨	Quit
+[RPS Player 3]: 🥳	Win
+[RPS Player 3]: 💨	Quit
+[RPS Player 4]: 😭	Lose
+[RPS Player 4]: 💨	Quit
+[RPS Player 6]: 🏳️	Opponent Quit
+[RPS Server]: matched [Player 7] and [Player 6]
+[RPS Player 7]: 🖐️	Paper
+[RPS Player 6]: 👊	Rock
+[RPS Player 6]: 😭	Lose
+[RPS Player 6]: 🖐️	Paper
+[RPS Player 7]: 🥳	Win
+[RPS Player 7]: ✌️	Scissors
+[RPS Player 7]: 🥳	Win
+[RPS Player 7]: 💨	Quit
+[RPS Player 6]: 😭	Lose
+[RPS Player 6]: 💨	Quit
+

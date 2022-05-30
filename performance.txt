@@ -1,0 +1,31 @@
+opt nocache R 4 264
+opt nocache R 64 295
+opt nocache R 256 408
+
+opt nocache S 4 280
+opt nocache S 64 311
+opt nocache S 256 425
+
+opt cache S 4 19
+opt cache S 64 20
+opt cache S 256 27
+
+opt cache R 4 18
+opt cache R 64 19
+opt cache R 256 26
+
+noopt nocache R 4 415
+noopt nocache R 64 881
+noopt nocache R 256 2368
+
+noopt nocache S 4 442
+noopt nocache S 64 906
+noopt nocache S 256 2394
+
+noopt cache S 4 29
+noopt cache S 64 57
+noopt cache S 256 146
+
+noopt cache R 4 28
+noopt cache R 64 55
+noopt cache R 256 144

@@ -25,6 +25,8 @@ CPPFLAGS = -I./include -I./user/include -MMD -MP
 # -msoft-float: no FP co-processor
 CXXFLAGS = -g -fPIC -Wall -mcpu=arm920t -msoft-float -fno-rtti -fno-exceptions -O3
 
+CXXFLAGS += -DENABLE_OPT=1 -DENABLE_CACHE=1 -DSENDER_FIRST=0
+
 # c: create archive, if necessary
 # r: insert with replacement
 # s: add index to archive

@@ -26,12 +26,12 @@ void nameServer() {
       nameTable.put(names[namesIdx], senderTid);
       ++namesIdx;
       ret = 0;
-      reply(senderTid, &ret, sizeof(int));
+      reply(senderTid, ret);
     } else {
       // who is
       const int *tid = nameTable.get(msg + 1);
       ret = tid ? *tid : -1;
-      reply(senderTid, &ret, sizeof(int));
+      reply(senderTid, ret);
     }
   }
 }

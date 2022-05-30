@@ -24,13 +24,13 @@ namespace rps {
 int signUp(int serverTid) {
   char msg = ACTION_SIGN_UP;
   int reply = -1;
-  int status = send(serverTid, &msg, sizeof(char), &reply, sizeof(int));
+  int status = send(serverTid, msg, reply);
   return status >= 0 ? reply : -1;
 }
 
 int play(int serverTid, char move) {
   int reply = -1;
-  int status = send(serverTid, &move, sizeof(char), &reply, sizeof(int));
+  int status = send(serverTid, move, reply);
   return status >= 0 ? reply : -1;
 }
 
@@ -58,22 +58,38 @@ void server() {
   HashTable<int, int, 64, 10> opponents;
   HashTable<int, int, 64, 10> play;
   int rply;
-  const int *opponentId;
+  const int *opponentTId;
+  const int *opponentPlay;
+
+  int colorTable[64] = {0};
+  int colorLen = 12;
+  int colors[colorLen] = {31, 32, 33, 34, 35, 36, 91, 92, 93, 94, 95, 96};
+  int colorCounter = 0;
 
   registerAs(RPS_SERVER_NAME);
 
   while (true) {
-    int receivedLen = receive(&clientTid, &msg, sizeof(char));
+    int receivedLen = receive(clientTid, msg);
     assert(receivedLen == sizeof(char));
+
+    if (colorTable[clientTid] == 0) {
+      colorTable[clientTid] = colors[colorCounter];
+      colorCounter = (colorCounter + 1) % colorLen;
+    }
+
     switch (msg) {
       case ACTION_SIGN_UP:
+        play.put(clientTid, -1);
         if (waitingTid >= 0) {
+          bwprintf(COM2,
+                   "[RPS Server]: matched \033[%dm[Player %d]\033[0m and "
+                   "\033[%dm[Player %d]\033[0m\n\r",
+                   colorTable[waitingTid], waitingTid, colorTable[clientTid],
+                   clientTid);
           opponents.put(waitingTid, clientTid);
           opponents.put(clientTid, waitingTid);
-          rply = 0;
-          reply(waitingTid, &rply, sizeof(int));
-          reply(clientTid, &rply, sizeof(int));
-
+          reply(waitingTid, colorTable[waitingTid]);
+          reply(clientTid, colorTable[clientTid]);
           waitingTid = -1;
         } else {
           waitingTid = clientTid;
@@ -81,86 +97,184 @@ void server() {
         break;
       case ACTION_QUIT:
         play.put(clientTid, ACTION_QUIT);
-        opponents.put(clientTid, -1);
+        opponentTId = opponents.get(clientTid);
+        if (opponentTId && *opponentTId >= 0) {
+          opponentPlay = play.get(*opponentTId);
+          if (opponentPlay && *opponentPlay >= 0) {
+            // opponent has played
+            rply = REPLY_OPPONENT_QUIT;
+            // reply to opponent
+            reply(*opponentTId, rply);
+            play.put(clientTid, -1);
+            play.put(*opponentTId, -1);
+            bwgetc(COM2);
+          }
+        }
+        // reply to self
         rply = 0;
-        reply(clientTid, &rply, sizeof(int));
+        reply(clientTid, rply);
         break;
       case ACTION_ROCK:
       case ACTION_PAPER:
       case ACTION_SCISSORS:
         play.put(clientTid, msg);
-        opponentId = opponents.get(clientTid);
+        opponentTId = opponents.get(clientTid);
 
-        if (opponentId && *opponentId >= 0) {
-          const int *opponentPlay = play.get(*opponentId);
+        if (opponentTId && *opponentTId >= 0) {
+          const int *opponentPlay = play.get(*opponentTId);
 
           if (opponentPlay && *opponentPlay >= 0) {
+            // opponent have played
             if (*opponentPlay == ACTION_QUIT) {
               // reply to self
               rply = REPLY_OPPONENT_QUIT;
-              reply(*opponentId, &rply, sizeof(int));
+              reply(clientTid, rply);
             } else {
               assert(ACTION_ROCK <= *opponentPlay &&
                      *opponentPlay <= ACTION_SCISSORS);
               int rpsResult = getRpsResult(msg, *opponentPlay);
               // reply to self
-              reply(clientTid, &rpsResult, sizeof(int));
+              reply(clientTid, rpsResult);
               // reply to opponent
               int opponentRpsResult = 2 - rpsResult;
-              reply(*opponentId, &opponentRpsResult, sizeof(int));
+              reply(*opponentTId, opponentRpsResult);
             }
 
             play.put(clientTid, -1);
-            play.put(*opponentId, -1);
+            play.put(*opponentTId, -1);
+
+            bwgetc(COM2);
           }
         }
         break;
       default:
-        bwputstr(COM2, "rps server: fatal error unknown action\n\r");
+        bwputstr(COM2, "[RPS Server]: fatal error unknown action\n\r");
         assert(false);
     }
   }
 }
 
-void client() {
+void clientLog(int tid, int color, const char *msg) {
+  bwprintf(COM2, "\033[%dm[RPS Player %d]\033[0m: %s\n\r", color, tid, msg);
+}
+
+void logMove(int tid, int color, char move) {
+  switch (move) {
+    case ACTION_SIGN_UP:
+      clientLog(tid, color, "🙋\tSign Up");
+      break;
+    case ACTION_ROCK:
+      clientLog(tid, color, "👊\tRock");
+      break;
+    case ACTION_PAPER:
+      clientLog(tid, color, "🖐️\tPaper");
+      break;
+    case ACTION_SCISSORS:
+      clientLog(tid, color, "✌️\tScissors");
+      break;
+    case ACTION_QUIT:
+      clientLog(tid, color, "💨\tQuit");
+      break;
+  }
+}
+
+void logResult(int tid, int color, int result) {
+  switch (result) {
+    case REPLY_WIN:
+      clientLog(tid, color, "🥳\tWin");
+      break;
+    case REPLY_TIE:
+      clientLog(tid, color, "🤔\tTie");
+      break;
+    case REPLY_LOSE:
+      clientLog(tid, color, "😭\tLose");
+      break;
+    case REPLY_OPPONENT_QUIT:
+      clientLog(tid, color, "🏳️\tOpponent Quit");
+      break;
+  }
+}
+
+/**
+ * player1 plays two games and quit
+ */
+void player1() {
   int tid = myTid();
   int serverTid = whoIs(RPS_SERVER_NAME);
-  bwprintf(COM2, "rps client %d: found server at %d\n\r", tid, serverTid);
-  if (signUp(serverTid) < 0) {
-    bwprintf(COM2, "rps client %d: failed to sign up\n\r", tid);
+
+  logMove(tid, 0, ACTION_SIGN_UP);
+  int color = signUp(serverTid);
+  if (color < 0) {
+    clientLog(tid, color, "❌\tFailed to sign up");
     return;
   }
-  for (int i = 0; i < 3; ++i) {
+
+  for (int i = 0; i < 2; ++i) {
     char move = timer::getTick() % 3;
-    switch (move) {
-      case ACTION_ROCK:
-        bwprintf(COM2, "rps client %d: play ROCK\n\r", tid);
-        break;
-      case ACTION_PAPER:
-        bwprintf(COM2, "rps client %d: play PAPER\n\r", tid);
-        break;
-      case ACTION_SCISSORS:
-        bwprintf(COM2, "rps client %d: play SCISSORS\n\r", tid);
-        break;
-    }
+    logMove(tid, color, move);
     int result = play(serverTid, move);
-    switch (result) {
-      case REPLY_WIN:
-        bwprintf(COM2, "rps client %d: win\n\r", tid);
-        break;
-      case REPLY_TIE:
-        bwprintf(COM2, "rps client %d: tie\n\r", tid);
-        break;
-      case REPLY_LOSE:
-        bwprintf(COM2, "rps client %d: loss\n\r", tid);
-        break;
-      case REPLY_OPPONENT_QUIT:
-        bwprintf(COM2, "rps client %d: opponent quit\n\r", tid);
-        break;
-    }
-    yield();
-    bwgetc(COM2);
+    logResult(tid, color, result);
   }
+  logMove(tid, color, ACTION_QUIT);
+  quit(serverTid);
+}
+
+/**
+ * player2 only plays one game and quit
+ */
+void player2() {
+  int tid = myTid();
+  int serverTid = whoIs(RPS_SERVER_NAME);
+
+  logMove(tid, 0, ACTION_SIGN_UP);
+  int color = signUp(serverTid);
+  if (color < 0) {
+    clientLog(tid, color, "❌\tFailed to sign up");
+    return;
+  }
+
+  char move = timer::getTick() % 3;
+  logMove(tid, color, move);
+
+  int result = play(serverTid, move);
+  logResult(tid, color, result);
+
+  logMove(tid, color, ACTION_QUIT);
+  quit(serverTid);
+}
+
+/**
+ * player3 wants to play two games, if
+ * the opponent quits before two games finish,
+ * player1 will sign up again to play 2 games
+ */
+void player3() {
+  int tid = myTid();
+  int serverTid = whoIs(RPS_SERVER_NAME);
+
+  logMove(tid, 0, ACTION_SIGN_UP);
+  int color = signUp(serverTid);
+  if (color < 0) {
+    clientLog(tid, color, "❌\tFailed to sign up");
+    return;
+  }
+
+  for (int i = 0; i < 2; ++i) {
+    char move = timer::getTick() % 3;
+    logMove(tid, color, move);
+    int result = play(serverTid, move);
+    logResult(tid, color, result);
+
+    if (result == REPLY_OPPONENT_QUIT) {
+      int color = signUp(serverTid);
+      if (color < 0) {
+        clientLog(tid, color, "❌\tFailed to sign up");
+        return;
+      }
+      i = -1;
+    }
+  }
+  logMove(tid, color, ACTION_QUIT);
   quit(serverTid);
 }
 
