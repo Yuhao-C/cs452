@@ -13,10 +13,13 @@ handleSWI:
 	mov		r0, sp 
 	ldr		r1, [lr, #-4]
 
-	add		r12, sp, #68
-	ldm		r12, {r4-r11, lr}
+	bl		enterKernel
 
-	b		enterKernel
+	add		sp, sp, #68
+	ldm		sp, {r4-r11, lr}
+	add		sp, sp, #36
+	bx		lr
+	
 
 	.text
 	.align 2

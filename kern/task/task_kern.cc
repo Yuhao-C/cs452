@@ -21,7 +21,7 @@ void taskBootstrap() {
   tidCounter = 0;
   userStack = 0x1000000;
   readyQueues = PriorityQueues();
-  addr_t *swiHandler = (addr_t *)0x28;
+  volatile addr_t *swiHandler = (addr_t *)0x28;
   *swiHandler = (addr_t)handleSWI;
 }
 

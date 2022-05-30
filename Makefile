@@ -23,7 +23,7 @@ CPPFLAGS = -I./include -I./user/include -MMD -MP
 # -Wall: report all warnings
 # -mcpu=arm920t: generate code for the 920t architecture
 # -msoft-float: no FP co-processor
-CXXFLAGS = -g -fPIC -Wall -mcpu=arm920t -msoft-float -fno-rtti -fno-exceptions
+CXXFLAGS = -g -fPIC -Wall -mcpu=arm920t -msoft-float -fno-rtti -fno-exceptions -O3
 
 # c: create archive, if necessary
 # r: insert with replacement
