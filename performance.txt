@@ -29,3 +29,24 @@ noopt cache S 256 146
 noopt cache R 4 28
 noopt cache R 64 55
 noopt cache R 256 144
+
+
+We first measure the time for accessing timer by first calling timer once to obtain the start time,
+then calling timer for 1000 times consecutively.
+This gives us the time for 1000 timer calls.
+From our measurements, 1000 timer calls takes at most ~1000 ticks (noopt nocache),
+therefore each timer call takes ~1 tick, which is ~2us.
+
+We make the sender calls send() 1000 times consecutively, and the receiver calls receive() and reply() 1000 times consecutively.
+We call timer before calling the first send() and after the last send() returns.
+This gives us the time for 1000 SRR plus one timer access.
+Since 1000 SRR calls takes at least ~18000 us, the time for one timer call (2 us) is insignificant and can be ignored.
+We get the time for one SRR by simply dividing the measured time by 1000.
+
+From the measurements, we see that receiver-first is slightly faster than sender-first.
+This is probably because there is no operation on send queue in receiver-first and thus less overhead.
+Compiler optimization reduce the SRR time by 35%-80%, where the reduce is more significant for larger messages.
+Without compiler optimization, SRR time increase significantly as message size increase.
+With compiler optimization, message size becomes much less significant. So copying with compiler optimization takes less time.
+Cache reduces the SRR time to 6%-7% of the time of SRR without cache.
+Due to spatial locality and temporal locality, most of our memory access could be found in cache, which is much faster than accessing memory.

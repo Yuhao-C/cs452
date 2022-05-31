@@ -29,7 +29,7 @@ void timerTest() {
   t0 = timer::getTick();
   THOUSAND(t1 = timer::getTick());
   timerOverhead = t0 - t1;
-  bwprintf(COM2, "timer overhead: %dt\r\n", timerOverhead);
+  bwprintf(COM2, "time for 1000 timer calls: %d ticks\r\n", timerOverhead);
 }
 
 void sender() {
@@ -66,8 +66,7 @@ void sender() {
     THOUSAND(send(receiverTid, msg, size, reply, size));
     unsigned int t1 = timer::getTick();
     (void)reply;
-    bwprintf(COM2, "%s %s %c %d %d\n\r", opt, cch, mode, size,
-             (t0 - t1 - timerOverhead) / 508);
+    bwprintf(COM2, "%s %s %c %d %d\n\r", opt, cch, mode, size, (t0 - t1) / 508);
   }
 }
 
