@@ -3,26 +3,19 @@
 #include "lib/hashtable.h"
 #include "lib/queue.h"
 #include "lib/timer.h"
+#include "name_server.h"
 #include "user/message.h"
 #include "user/task.h"
 
 #define RPS_SERVER_NAME "RPS_SERVER"
 
-#define ACTION_ROCK 0
-#define ACTION_PAPER 1
-#define ACTION_SCISSORS 2
-#define ACTION_SIGN_UP 3
-#define ACTION_QUIT 4
-
-#define REPLY_OPPONENT_QUIT -1
-#define REPLY_LOSE 0
-#define REPLY_TIE 1
-#define REPLY_WIN 2
-
 namespace rps {
 
+enum Action { Rock = 0, Paper, Scissors, SignUp, Quit };
+enum Reply { OpponentQuit = -1, Lose, Tie, Win };
+
 int signUp(int serverTid) {
-  char msg = ACTION_SIGN_UP;
+  char msg = Action::SignUp;
   int reply = -1;
   int status = send(serverTid, msg, reply);
   return status >= 0 ? reply : -1;
@@ -35,7 +28,7 @@ int play(int serverTid, char move) {
 }
 
 int quit(int serverTid) {
-  char msg = ACTION_QUIT;
+  char msg = Action::Quit;
   int reply = -1;
   int status = send(serverTid, msg, reply);
   return status >= 0 ? reply : -1;
@@ -43,11 +36,11 @@ int quit(int serverTid) {
 
 int getRpsResult(int myPlay, int opponentPlay) {
   if ((myPlay + 1) % 3 == opponentPlay) {
-    return REPLY_LOSE;
+    return Reply::Lose;
   } else if (myPlay == opponentPlay) {
-    return REPLY_TIE;
+    return Reply::Tie;
   }
-  return REPLY_WIN;
+  return Reply::Win;
 }
 
 void server() {
@@ -78,7 +71,7 @@ void server() {
     }
 
     switch (msg) {
-      case ACTION_SIGN_UP:
+      case Action::SignUp:
         play.put(clientTid, -1);
         if (waitingTid >= 0) {
           bwprintf(COM2,
@@ -95,14 +88,14 @@ void server() {
           waitingTid = clientTid;
         }
         break;
-      case ACTION_QUIT:
-        play.put(clientTid, ACTION_QUIT);
+      case Action::Quit:
+        play.put(clientTid, Action::Quit);
         opponentTId = opponents.get(clientTid);
         if (opponentTId && *opponentTId >= 0) {
           opponentPlay = play.get(*opponentTId);
           if (opponentPlay && *opponentPlay >= 0) {
             // opponent has played
-            rply = REPLY_OPPONENT_QUIT;
+            rply = Reply::OpponentQuit;
             // reply to opponent
             reply(*opponentTId, rply);
             play.put(clientTid, -1);
@@ -114,9 +107,9 @@ void server() {
         rply = 0;
         reply(clientTid, rply);
         break;
-      case ACTION_ROCK:
-      case ACTION_PAPER:
-      case ACTION_SCISSORS:
+      case Action::Rock:
+      case Action::Paper:
+      case Action::Scissors:
         play.put(clientTid, msg);
         opponentTId = opponents.get(clientTid);
 
@@ -125,13 +118,13 @@ void server() {
 
           if (opponentPlay && *opponentPlay >= 0) {
             // opponent have played
-            if (*opponentPlay == ACTION_QUIT) {
+            if (*opponentPlay == Action::Quit) {
               // reply to self
-              rply = REPLY_OPPONENT_QUIT;
+              rply = Reply::OpponentQuit;
               reply(clientTid, rply);
             } else {
-              assert(ACTION_ROCK <= *opponentPlay &&
-                     *opponentPlay <= ACTION_SCISSORS);
+              assert(Action::Rock <= *opponentPlay &&
+                     *opponentPlay <= Action::Scissors);
               int rpsResult = getRpsResult(msg, *opponentPlay);
               // reply to self
               reply(clientTid, rpsResult);
@@ -160,19 +153,19 @@ void clientLog(int tid, int color, const char *msg) {
 
 void logMove(int tid, int color, char move) {
   switch (move) {
-    case ACTION_SIGN_UP:
+    case Action::SignUp:
       clientLog(tid, color, "🙋\tSign Up");
       break;
-    case ACTION_ROCK:
+    case Action::Rock:
       clientLog(tid, color, "👊\tRock");
       break;
-    case ACTION_PAPER:
+    case Action::Paper:
       clientLog(tid, color, "🖐️\tPaper");
       break;
-    case ACTION_SCISSORS:
+    case Action::Scissors:
       clientLog(tid, color, "✌️\tScissors");
       break;
-    case ACTION_QUIT:
+    case Action::Quit:
       clientLog(tid, color, "💨\tQuit");
       break;
   }
@@ -180,16 +173,16 @@ void logMove(int tid, int color, char move) {
 
 void logResult(int tid, int color, int result) {
   switch (result) {
-    case REPLY_WIN:
+    case Reply::Win:
       clientLog(tid, color, "🥳\tWin");
       break;
-    case REPLY_TIE:
+    case Reply::Tie:
       clientLog(tid, color, "🤔\tTie");
       break;
-    case REPLY_LOSE:
+    case Reply::Lose:
       clientLog(tid, color, "😭\tLose");
       break;
-    case REPLY_OPPONENT_QUIT:
+    case Reply::OpponentQuit:
       clientLog(tid, color, "🏳️\tOpponent Quit");
       break;
   }
@@ -202,7 +195,7 @@ void player1() {
   int tid = myTid();
   int serverTid = whoIs(RPS_SERVER_NAME);
 
-  logMove(tid, 0, ACTION_SIGN_UP);
+  logMove(tid, 0, Action::SignUp);
   int color = signUp(serverTid);
   if (color < 0) {
     clientLog(tid, color, "❌\tFailed to sign up");
@@ -215,7 +208,7 @@ void player1() {
     int result = play(serverTid, move);
     logResult(tid, color, result);
   }
-  logMove(tid, color, ACTION_QUIT);
+  logMove(tid, color, Action::Quit);
   quit(serverTid);
 }
 
@@ -226,7 +219,7 @@ void player2() {
   int tid = myTid();
   int serverTid = whoIs(RPS_SERVER_NAME);
 
-  logMove(tid, 0, ACTION_SIGN_UP);
+  logMove(tid, 0, Action::SignUp);
   int color = signUp(serverTid);
   if (color < 0) {
     clientLog(tid, color, "❌\tFailed to sign up");
@@ -239,7 +232,7 @@ void player2() {
   int result = play(serverTid, move);
   logResult(tid, color, result);
 
-  logMove(tid, color, ACTION_QUIT);
+  logMove(tid, color, Action::Quit);
   quit(serverTid);
 }
 
@@ -252,7 +245,7 @@ void player3() {
   int tid = myTid();
   int serverTid = whoIs(RPS_SERVER_NAME);
 
-  logMove(tid, 0, ACTION_SIGN_UP);
+  logMove(tid, 0, Action::SignUp);
   int color = signUp(serverTid);
   if (color < 0) {
     clientLog(tid, color, "❌\tFailed to sign up");
@@ -265,7 +258,7 @@ void player3() {
     int result = play(serverTid, move);
     logResult(tid, color, result);
 
-    if (result == REPLY_OPPONENT_QUIT) {
+    if (result == Reply::OpponentQuit) {
       int color = signUp(serverTid);
       if (color < 0) {
         clientLog(tid, color, "❌\tFailed to sign up");
@@ -274,7 +267,7 @@ void player3() {
       i = -1;
     }
   }
-  logMove(tid, color, ACTION_QUIT);
+  logMove(tid, color, Action::Quit);
   quit(serverTid);
 }
 

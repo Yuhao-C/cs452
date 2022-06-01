@@ -26,6 +26,12 @@ void startPerfTest() {
 #endif
 }
 
+void idleTask() {
+  while (true) {
+    (void)0;
+  }
+}
+
 void boot() {
   timer::stop();
   timer::load();

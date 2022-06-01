@@ -1,9 +1,6 @@
 #include "kern/common.h"
-#include "kern/syscall.h"
 #include "kern/task.h"
 #include "user/task.h"
-
-#define SWI(n) "swi " TOSTRING(n)
 
 TaskDescriptor tasks[NUM_TASKS];
 TaskDescriptor *curTask;
@@ -21,8 +18,6 @@ void taskBootstrap() {
   tidCounter = 0;
   userStack = 0x1000000;
   readyQueues = PriorityQueues();
-  volatile addr_t *swiHandler = (addr_t *)0x28;
-  *swiHandler = (addr_t)handleSWI;
 }
 
 void taskStart(void (*fn)()) {

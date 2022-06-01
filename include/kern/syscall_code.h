@@ -1,14 +1,16 @@
 #ifndef KERN_SYSCALL_CODE_H_
 #define KERN_SYSCALL_CODE_H_
 
-#define SYS_CREATE 0
-#define SYS_TID 1
-#define SYS_PARENT_TID 2
-#define SYS_YIELD 3
-#define SYS_EXIT 4
-#define SYS_SEND 5
-#define SYS_RECEIVE 6
-#define SYS_REPLY 7
+#define IRQ_TC3UI 51
+
+#define SYS_CREATE 64
+#define SYS_TID 65
+#define SYS_PARENT_TID 66
+#define SYS_YIELD 67
+#define SYS_EXIT 68
+#define SYS_SEND 69
+#define SYS_RECEIVE 70
+#define SYS_REPLY 71
 
 #define SYSCALL_FUNC(name, code) \
   .text;                         \

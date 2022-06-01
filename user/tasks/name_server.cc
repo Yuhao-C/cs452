@@ -17,7 +17,7 @@ void nameServer() {
   char msg[MSG_LEN];
   int ret;
   while (true) {
-    int receivedLen = receive(&senderTid, msg, MSG_LEN);
+    int receivedLen = receive(senderTid, msg);
     assert(receivedLen == MSG_LEN);
     assert(msg[0] == MSG_REGISTER || msg[0] == MSG_WHO);
     if (msg[0] == MSG_REGISTER) {
@@ -47,7 +47,7 @@ int registerAs(const char *name) {
   int reply = -1;
   msg[0] = MSG_REGISTER;
   strCopy(name, msg + 1, MSG_LEN - 1);
-  int status = send(NAME_SERVER_TID, msg, MSG_LEN, &reply, sizeof(int));
+  int status = send(NAME_SERVER_TID, msg, reply);
   return status >= 0 ? 0 : -1;
 }
 
@@ -62,6 +62,6 @@ int whoIs(const char *name) {
   int reply = -1;
   msg[0] = MSG_WHO;
   strCopy(name, msg + 1, MSG_LEN - 1);
-  int status = send(NAME_SERVER_TID, msg, MSG_LEN, &reply, sizeof(int));
+  int status = send(NAME_SERVER_TID, msg, reply);
   return status >= 0 ? reply : -1;
 }

@@ -29,7 +29,9 @@ struct Trapframe {
 extern "C" {
 void handleSWI();
 
-void enterKernel(Trapframe *tf, unsigned int code);
+void handleIRQ();
+
+void enterKernel(unsigned int code);
 
 void userMode(Trapframe *tf);
 }

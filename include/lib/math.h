@@ -1,0 +1,1 @@
+unsigned int log2(unsigned int x);
