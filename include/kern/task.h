@@ -23,6 +23,7 @@ struct TaskDescriptor {
   int priority;
   TaskDescriptor *nextReady;
   TaskDescriptor *nextSend;
+  TaskDescriptor *nextEventBlocked;
   TaskDescriptor *lastSend;
   State state;
   int retVal;

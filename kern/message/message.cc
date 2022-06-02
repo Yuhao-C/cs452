@@ -27,13 +27,13 @@ void msgCopy(TaskDescriptor *sender, TaskDescriptor *receiver) {
   receiver->tf.r0 = copiedLen;
 }
 
-void msgSend(Trapframe *tf) {
-  int tid = tf->r0;
+void msgSend() {
+  int tid = curTask->tf.r0;
 
   // TODO: check condition for return -2
 
   if (!isTidValid(tid)) {
-    tf->r0 = -1;
+    curTask->tf.r0 = -1;
     taskYield();
     return;
   }
@@ -54,7 +54,7 @@ void msgSend(Trapframe *tf) {
   }
 }
 
-void msgReceive(Trapframe *tf) {
+void msgReceive() {
   TaskDescriptor *sender = curTask->dequeueSender();
   TaskDescriptor *receiver = curTask;
 
@@ -71,19 +71,19 @@ void msgReceive(Trapframe *tf) {
   }
 }
 
-void msgReply(Trapframe *tf) {
-  int tid = (int)tf->r0;
-  const char *reply = (const char *)tf->r1;
-  int replyLen = (int)tf->r2;
+void msgReply() {
+  int tid = (int)curTask->tf.r0;
+  const char *reply = (const char *)curTask->tf.r1;
+  int replyLen = (int)curTask->tf.r2;
 
   if (!isTidValid(tid)) {
-    tf->r0 = -1;
+    curTask->tf.r0 = -1;
     taskYield();
     return;
   }
   TaskDescriptor *sender = &tasks[tid];
   if (sender->state != TaskDescriptor::State::kReplyBlocked) {
-    tf->r0 = -2;
+    curTask->tf.r0 = -2;
     taskYield();
     return;
   }
@@ -95,7 +95,7 @@ void msgReply(Trapframe *tf) {
   int senderBufLen = *(int *)sender->tf.r13;
   int copiedLen = msgCopy(reply, replyLen, senderBuf, senderBufLen);
 
-  tf->r0 = copiedLen;
+  curTask->tf.r0 = copiedLen;
   sender->tf.r0 = copiedLen;
 
   taskYield();

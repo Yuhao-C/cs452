@@ -203,7 +203,7 @@ void player1() {
   }
 
   for (int i = 0; i < 2; ++i) {
-    char move = timer::getTick() % 3;
+    char move = timer::getTick(TIMER3_BASE) % 3;
     logMove(tid, color, move);
     int result = play(serverTid, move);
     logResult(tid, color, result);
@@ -226,7 +226,7 @@ void player2() {
     return;
   }
 
-  char move = timer::getTick() % 3;
+  char move = timer::getTick(TIMER3_BASE) % 3;
   logMove(tid, color, move);
 
   int result = play(serverTid, move);
@@ -253,7 +253,7 @@ void player3() {
   }
 
   for (int i = 0; i < 2; ++i) {
-    char move = timer::getTick() % 3;
+    char move = timer::getTick(TIMER3_BASE) % 3;
     logMove(tid, color, move);
     int result = play(serverTid, move);
     logResult(tid, color, result);

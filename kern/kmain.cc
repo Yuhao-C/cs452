@@ -1,6 +1,7 @@
 
 #include "../user/include/boot.h"
 #include "kern/common.h"
+#include "kern/event.h"
 #include "kern/sys.h"
 #include "kern/syscall.h"
 #include "kern/task.h"
@@ -13,6 +14,7 @@ int main() {
 
   sysBootstrap(lr);
   taskBootstrap();
+  eventBootstrap();
 
 #if ENABLE_CACHE
   // clean and invalidate cache

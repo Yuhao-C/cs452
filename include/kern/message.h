@@ -3,10 +3,10 @@
 
 #include "kern/syscall.h"
 
-void msgSend(Trapframe *tf);
+void msgSend();
 
-void msgReceive(Trapframe *tf);
+void msgReceive();
 
-void msgReply(Trapframe *tf);
+void msgReply();
 
 #endif  // KERN_MESSAGE_H_

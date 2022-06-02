@@ -26,8 +26,8 @@ unsigned int timerOverhead;
 
 void timerTest() {
   unsigned int t0, t1;
-  t0 = timer::getTick();
-  THOUSAND(t1 = timer::getTick());
+  t0 = timer::getTick(TIMER3_BASE);
+  THOUSAND(t1 = timer::getTick(TIMER3_BASE));
   timerOverhead = t0 - t1;
   bwprintf(COM2, "time for 1000 timer calls: %d ticks\r\n", timerOverhead);
 }
@@ -62,9 +62,9 @@ void sender() {
   for (int i = 0; i < 3; ++i) {
     int size = messageSize[i];
     // bwprintf(COM2, "sender start sending 1000 %d-byte messages\n\r", size);
-    unsigned int t0 = timer::getTick();
+    unsigned int t0 = timer::getTick(TIMER3_BASE);
     THOUSAND(send(receiverTid, msg, size, reply, size));
-    unsigned int t1 = timer::getTick();
+    unsigned int t1 = timer::getTick(TIMER3_BASE);
     (void)reply;
     bwprintf(COM2, "%s %s %c %d %d\n\r", opt, cch, mode, size, (t0 - t1) / 508);
   }
