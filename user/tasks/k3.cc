@@ -26,8 +26,7 @@ void idleTask() {
   int clockServerTid = whoIs(CLOCK_SERVER_NAME);
   int i = 0;
   while (true) {
-    ++i;
-    if (i % 50 == 0) {
+    if (i && i % 50 == 0) {
       unsigned int idleTime = getIdleTime();
       unsigned int sysTime = time(clockServerTid);
       bwprintf(COM2, "idle time: %u, sys time: %u, idle fraction: %u.%u%%\n\r",
@@ -36,5 +35,6 @@ void idleTask() {
     }
     volatile unsigned int temp = *(volatile unsigned int *)HALT;
     (void)temp;
+    ++i;
   }
 }
