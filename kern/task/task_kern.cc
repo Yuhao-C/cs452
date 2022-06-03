@@ -1,5 +1,7 @@
 #include "kern/common.h"
+#include "kern/sys.h"
 #include "kern/task.h"
+#include "lib/bwio.h"
 #include "user/task.h"
 
 TaskDescriptor tasks[NUM_TASKS];
@@ -57,7 +59,18 @@ void taskYield() {
   readyQueues.enqueue(curTask);
 }
 
-void taskExit() { curTask->state = TaskDescriptor::State::kZombie; }
+void taskExit() {
+  curTask->state = TaskDescriptor::State::kZombie;
+  for (int i = 0; i < tidCounter; ++i) {
+    if (!(tasks[i].state == TaskDescriptor::State::kZombie ||
+          tasks[i].state == TaskDescriptor::State::kReceiveBlocked ||
+          tasks[i].state == TaskDescriptor::State::kEventBlocked ||
+          tasks[i].priority == 7)) {
+      return;
+    }
+  }
+  kExit();
+}
 
 int taskActivate(TaskDescriptor *task) {
   curTask = task;

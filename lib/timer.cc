@@ -4,23 +4,23 @@
 
 namespace timer {
 
-void load() {
-  volatile unsigned int *addr = (unsigned int *)(TIMER3_BASE + LDR_OFFSET);
-  *addr = 0xffffffff;
+void load(unsigned int timerBase, unsigned int initialTimeMs) {
+  volatile unsigned int *addr = (unsigned int *)(timerBase + LDR_OFFSET);
+  *addr = initialTimeMs * (TIMER3_FRQ / 1000);
 }
 
-void start() {
-  volatile unsigned int *addr = (unsigned int *)(TIMER3_BASE + CTRL_OFFSET);
+void start(unsigned int timerBase) {
+  volatile unsigned int *addr = (unsigned int *)(timerBase + CTRL_OFFSET);
   *addr = 0b11001000;
 }
 
-void stop() {
-  volatile unsigned int *addr = (unsigned int *)(TIMER3_BASE + CTRL_OFFSET);
-  *addr &= 0xffffff7f;
+void stop(unsigned int timerBase) {
+  volatile unsigned int *addr = (unsigned int *)(timerBase + CTRL_OFFSET);
+  *addr &= 0x7f;
 }
 
-unsigned int getTick() {
-  volatile unsigned int *addr = (unsigned int *)(TIMER3_BASE + VAL_OFFSET);
+unsigned int getTick(unsigned int timerBase) {
+  volatile unsigned int *addr = (unsigned int *)(timerBase + VAL_OFFSET);
   return *addr;
 }
 

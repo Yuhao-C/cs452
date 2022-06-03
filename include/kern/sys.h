@@ -3,6 +3,10 @@
 
 #include "kern/common.h"
 
+extern unsigned int idleTime;
+
+extern "C" unsigned int getIdleTime();
+
 void sysBootstrap(addr_t lr);
 
 void kExit();

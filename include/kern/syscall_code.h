@@ -11,6 +11,9 @@
 #define SYS_SEND 69
 #define SYS_RECEIVE 70
 #define SYS_REPLY 71
+#define SYS_AWAIT_EVENT 72
+
+#define SYS_IDLE_TIME 128
 
 #define SYSCALL_FUNC(name, code) \
   .text;                         \

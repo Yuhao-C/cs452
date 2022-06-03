@@ -1,18 +1,32 @@
 #include "kern/syscall.h"
 
 #include "kern/arch/ts7200.h"
+#include "kern/event.h"
+#include "kern/interrupt.h"
 #include "kern/message.h"
+#include "kern/sys.h"
 #include "kern/task.h"
 #include "lib/assert.h"
 #include "lib/bwio.h"
 #include "lib/math.h"
+#include "lib/timer.h"
+
+#define TIMER2_INIT_MS 100
 
 extern "C" {
-void trap(Trapframe *tf) { curTask->tf = *tf; }
+void trap(Trapframe *tf) {
+  if (curTask->priority == 7 && curTask->nextReady == nullptr) {
+    int temp = 508 * TIMER2_INIT_MS - timer::getTick(TIMER2_BASE);
+    idleTime += temp;
+  }
+  curTask->tf = *tf;
+}
 
 unsigned int getIrqStatus() {
-  unsigned int vic1Status = *(unsigned int *)(VIC1_BASE + IRQ_STATUS_OFFSET);
-  unsigned int vic2Status = *(unsigned int *)(VIC2_BASE + IRQ_STATUS_OFFSET);
+  unsigned int vic1Status =
+      *(volatile unsigned int *)(VIC1_BASE + IRQ_STATUS_OFFSET);
+  unsigned int vic2Status =
+      *(volatile unsigned int *)(VIC2_BASE + IRQ_STATUS_OFFSET);
   kAssert(vic1Status != 0 || vic2Status != 0);
 
   unsigned int result = -1;
@@ -23,8 +37,6 @@ unsigned int getIrqStatus() {
   }
   kAssert(0 <= result && result < 64);
 
-  bwprintf(COM2, "IRQ status: %d\n\r", result);
-
   return result;
 }
 
@@ -33,7 +45,7 @@ void enterKernel(unsigned int code) {
 
   switch (code) {
     case IRQ_TC3UI:
-      *(unsigned int *)(TIMER3_BASE + CLR_OFFSET) = 1;
+      handleTC3UI();
       taskYield();
       break;
     case SYS_CREATE:
@@ -55,13 +67,20 @@ void enterKernel(unsigned int code) {
       taskExit();
       break;
     case SYS_SEND:
-      msgSend(&curTask->tf);
+      msgSend();
       break;
     case SYS_RECEIVE:
-      msgReceive(&curTask->tf);
+      msgReceive();
       break;
     case SYS_REPLY:
-      msgReply(&curTask->tf);
+      msgReply();
+      break;
+    case SYS_AWAIT_EVENT:
+      handleAwaitEvent();
+      break;
+    case SYS_IDLE_TIME:
+      curTask->tf.r0 = idleTime / 5080;
+      taskYield();
       break;
     default:
       bwprintf(COM2,
@@ -69,9 +88,16 @@ void enterKernel(unsigned int code) {
                "FATAL: unknown syscall code: %u\n\r"
                "\033[0m",
                code);
-      taskYield();
+      kAssert(false);
   }
 }
 }
 
-void leaveKernel() { userMode(&curTask->tf); }
+void leaveKernel() {
+  if (curTask->priority == 7 && curTask->nextReady == nullptr) {
+    timer::stop(TIMER2_BASE);
+    timer::load(TIMER2_BASE, TIMER2_INIT_MS);
+    timer::start(TIMER2_BASE);
+  }
+  userMode(&curTask->tf);
+}

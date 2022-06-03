@@ -6,8 +6,8 @@
 #include "lib/assert.h"
 
 void handleTC3UI() {
-  // clear interrupt
-  *(unsigned int *)(TIMER3_BASE + CLR_OFFSET) = 1;
+  // clear tc3 interrupt
+  *(volatile unsigned int *)(TIMER3_BASE + CLR_OFFSET) = 1;
 
   TaskDescriptor *awaitingTask = eventQueues[IRQ_TC3UI];
   if (!awaitingTask) {

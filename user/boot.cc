@@ -1,6 +1,8 @@
 #include "boot.h"
 
+#include "clock_server.h"
 #include "k1.h"
+#include "k3.h"
 #include "lib/bwio.h"
 #include "lib/timer.h"
 #include "name_server.h"
@@ -26,17 +28,20 @@ void startPerfTest() {
 #endif
 }
 
-void idleTask() {
-  while (true) {
-    (void)0;
-  }
-}
-
 void boot() {
-  timer::stop();
-  timer::load();
-  timer::start();
   create(0, nameServer);
+  int clockServerTid = create(0, clockServer);
 
-  startRps();
+  create(7, idleTask);
+
+  int rply[4][2] = {{10, 20}, {23, 9}, {33, 6}, {71, 3}};
+  for (int i = 3; i <= 6; ++i) {
+    create(i, k3Client);
+  }
+
+  for (int i = 0; i < 4; ++i) {
+    int tid, msg;
+    receive(tid, msg);
+    reply(tid, rply[i]);
+  }
 }
