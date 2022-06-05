@@ -22,19 +22,23 @@ void k3Client() {
   }
 }
 
-void idleTask() {
+void displayIdleStats() {
   int clockServerTid = whoIs(CLOCK_SERVER_NAME);
-  int i = 0;
+  unsigned int idleTime = getIdleTime();
+  unsigned int sysTime = time(clockServerTid);
+  bwprintf(COM2, "idle time: %u, sys time: %u, idle fraction: %u.%u%%\n\r",
+           idleTime, sysTime, idleTime * 100 / sysTime,
+           (idleTime * 1000 / sysTime) % 10);
+}
+
+void idleTask() {
+  int tick = 0;
   while (true) {
-    if (i && i % 50 == 0) {
-      unsigned int idleTime = getIdleTime();
-      unsigned int sysTime = time(clockServerTid);
-      bwprintf(COM2, "idle time: %u, sys time: %u, idle fraction: %u.%u%%\n\r",
-               idleTime, sysTime, idleTime * 100 / sysTime,
-               (idleTime * 1000 / sysTime) % 10);
+    if (tick && tick % 50 == 0) {
+      // executes every 50 ticks
+      displayIdleStats();
     }
-    volatile unsigned int temp = *(volatile unsigned int *)HALT;
-    (void)temp;
-    ++i;
+    *(volatile unsigned int *)HALT;  // halt until next interrupt
+    ++tick;
   }
 }

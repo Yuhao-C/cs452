@@ -30,7 +30,7 @@ void startPerfTest() {
 
 void boot() {
   create(0, nameServer);
-  int clockServerTid = create(0, clockServer);
+  create(0, clockServer);
 
   create(7, idleTask);
 
