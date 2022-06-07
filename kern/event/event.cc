@@ -3,11 +3,26 @@
 #include "kern/task.h"
 #include "lib/assert.h"
 
-TaskDescriptor *eventQueues[NUM_EVENTS];
+EventBuffer::EventBuffer() : head{nullptr} {}
+
+void EventBuffer::push(TaskDescriptor *task) {
+  task->nextEventBlocked = head;
+  head = task;
+}
+
+TaskDescriptor *EventBuffer::pop() {
+  TaskDescriptor *temp = head;
+  if (temp) {
+    head = temp->nextEventBlocked;
+  }
+  return temp;
+}
+
+EventBuffer eventBuffers[NUM_EVENTS];
 
 void eventBootstrap() {
   for (int i = 0; i < NUM_EVENTS; ++i) {
-    eventQueues[i] = nullptr;
+    eventBuffers[i] = EventBuffer();
   }
 }
 
@@ -16,15 +31,6 @@ void handleAwaitEvent() {
   kAssert(0 <= eventType && eventType < NUM_EVENTS);
   curTask->state = TaskDescriptor::State::kEventBlocked;
 
-  // enqueue task
-  curTask->nextEventBlocked = nullptr;
-  if (eventQueues[eventType]) {
-    TaskDescriptor *tail = eventQueues[eventType];
-    while (tail->nextEventBlocked) {
-      tail = tail->nextEventBlocked;
-    }
-    tail->nextEventBlocked = curTask;
-  } else {
-    eventQueues[eventType] = curTask;
-  }
+  // push task
+  eventBuffers[eventType].push(curTask);
 }

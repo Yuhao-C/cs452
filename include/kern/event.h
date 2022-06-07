@@ -7,7 +7,16 @@
 
 struct TaskDescriptor;
 
-extern TaskDescriptor *eventQueues[NUM_EVENTS];
+class EventBuffer {
+  TaskDescriptor *head;
+
+ public:
+  EventBuffer();
+  void push(TaskDescriptor *task);
+  TaskDescriptor *pop();
+};
+
+extern EventBuffer eventBuffers[NUM_EVENTS];
 
 void eventBootstrap();
 
