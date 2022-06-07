@@ -36,7 +36,7 @@ unsigned int getIrqStatus() {
     result = log2(vic2Status) + 32;
   }
   kAssert(0 <= result && result < 64);
-
+  // bwprintf(COM2, "irq: %d\n\r", result);
   return result;
 }
 
@@ -46,6 +46,11 @@ void enterKernel(unsigned int code) {
   switch (code) {
     case IRQ_TC3UI:
       handleTC3UI();
+      taskYield();
+      break;
+    case IRQ_UART1:
+    case IRQ_UART2:
+      handleUART(code);
       taskYield();
       break;
     case SYS_CREATE:

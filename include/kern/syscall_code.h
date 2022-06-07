@@ -2,6 +2,8 @@
 #define KERN_SYSCALL_CODE_H_
 
 #define IRQ_TC3UI 51
+#define IRQ_UART1 52
+#define IRQ_UART2 54
 
 #define SYS_CREATE 64
 #define SYS_TID 65

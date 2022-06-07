@@ -27,9 +27,12 @@ void sysBootstrap(addr_t lr) {
   *SWI_HANDLER = (addr_t)handleSWI;
   *IRQ_HANDLER = (addr_t)handleIRQ;
 
-  // enable interrupts
-  *(volatile unsigned int *)(VIC1_BASE + INT_ENABLE_OFFSET) = 0;
-  *(volatile unsigned int *)(VIC2_BASE + INT_ENABLE_OFFSET) = 0x80000;
+  /**
+   * enable interrupts
+   * 51, 52, 54
+   */
+  *(volatile unsigned int *)(VIC1_BASE + INT_ENABLE_OFFSET) = 0x0;
+  *(volatile unsigned int *)(VIC2_BASE + INT_ENABLE_OFFSET) = 0x580000;
 
   // enable Halt
   *(volatile unsigned int *)(SYS_SW_LOCK) = 0xaa;
@@ -37,7 +40,12 @@ void sysBootstrap(addr_t lr) {
 }
 
 void kExit() {
+  timer::stop(TIMER2_BASE);
   timer::stop(TIMER3_BASE);
+
+  // disable UART interrupts
+  *(volatile unsigned int *)(UART1_BASE + UART_CTRL_OFFSET) = 1;
+  *(volatile unsigned int *)(UART2_BASE + UART_CTRL_OFFSET) = 1;
 
   asm volatile(
       "mov lr, %[value]\n\t"

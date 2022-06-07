@@ -8,6 +8,7 @@
 #include "name_server.h"
 #include "perf_test.h"
 #include "rps.h"
+#include "uart_server.h"
 #include "user/message.h"
 #include "user/task.h"
 
@@ -30,6 +31,7 @@ void startPerfTest() {
 
 void boot() {
   create(0, nameServer);
+  create(0, uart::server);
   create(0, clockServer);
 
   create(7, idleTask);

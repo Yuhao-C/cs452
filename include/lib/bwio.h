@@ -23,6 +23,8 @@ int bwsetfifo(int channel, int state);
 
 int bwsetspeed(int channel, int speed);
 
+int bwsetstp2(int channel, int select);
+
 int bwputc(int channel, char c);
 
 int bwgetc(int channel);

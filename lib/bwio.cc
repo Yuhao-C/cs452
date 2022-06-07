@@ -36,32 +36,38 @@ int bwsetfifo(int channel, int state) {
 }
 
 int bwsetspeed(int channel, int speed) {
-  volatile int *high, *low;
+  unsigned int base = channel == COM1 ? UART1_BASE : UART2_BASE;
+  volatile int *mid, *low;
+  int baudDiv;
+  mid = (int *)(base + UART_LCRM_OFFSET);
+  low = (int *)(base + UART_LCRL_OFFSET);
+  baudDiv = UARTCLK / (16 * speed) - 1;
+  if (0 < baudDiv && baudDiv <= 0xffff) {
+    *mid = (baudDiv >> 8) & 0xff;
+    *low = baudDiv & 0xff;
+    return 0;
+  }
+  return -1;
+}
+
+int bwsetstp2(int channel, int select) {
+  unsigned int base;
+  int *high, val;
   switch (channel) {
     case COM1:
-      high = (int *)(UART1_BASE + UART_LCRM_OFFSET);
-      low = (int *)(UART1_BASE + UART_LCRL_OFFSET);
+      base = UART1_BASE;
       break;
     case COM2:
-      high = (int *)(UART2_BASE + UART_LCRM_OFFSET);
-      low = (int *)(UART2_BASE + UART_LCRL_OFFSET);
+      base = UART2_BASE;
       break;
     default:
       return -1;
-      break;
   }
-  switch (speed) {
-    case 115200:
-      *high = 0x0;
-      *low = 0x3;
-      return 0;
-    case 2400:
-      *high = 0x0;
-      *low = 0xbf;
-      return 0;
-    default:
-      return -1;
-  }
+  high = (int *)(base + UART_LCRH_OFFSET);
+  val = *high;
+  val = select ? val | STP2_MASK : val & ~STP2_MASK;
+  *high = val;
+  return 0;
 }
 
 int bwputc(int channel, char c) {
