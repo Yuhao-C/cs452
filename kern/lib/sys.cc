@@ -34,6 +34,10 @@ void sysBootstrap(addr_t lr) {
   *(volatile unsigned int *)(VIC1_BASE + INT_ENABLE_OFFSET) = 0x0;
   *(volatile unsigned int *)(VIC2_BASE + INT_ENABLE_OFFSET) = 0x580000;
 
+  // enable UART
+  *(volatile unsigned int *)(UART1_BASE + UART_CTRL_OFFSET) = 0b1001;
+  *(volatile unsigned int *)(UART2_BASE + UART_CTRL_OFFSET) = 0b1;
+
   // enable Halt
   *(volatile unsigned int *)(SYS_SW_LOCK) = 0xaa;
   *(volatile unsigned int *)(DEVICE_CFG) |= 1;
