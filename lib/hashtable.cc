@@ -3,8 +3,8 @@
 #include "lib/assert.h"
 #include "lib/string.h"
 
-int hash(const String &s) {
-  int h = 0;
+unsigned int hash(const String &s) {
+  unsigned int h = 0;
   const char *c = s.cStr();
   assert(c != nullptr);
   while (*c) {
@@ -15,4 +15,4 @@ int hash(const String &s) {
   return h;
 }
 
-int hash(int n) { return n; }
+unsigned int hash(int n) { return n; }

@@ -3,8 +3,8 @@
 
 #include "lib/string.h"
 
-int hash(const String &s);
-int hash(int n);
+unsigned int hash(const String &s);
+unsigned int hash(int n);
 
 template <typename K, typename V, int cap, int bucketSize>
 class HashTable {
@@ -28,7 +28,7 @@ class HashTable {
 
   void put(K key, V value) {
     assert(size < cap);
-    int b = hash(key) % bucketSize;
+    unsigned int b = hash(key) % bucketSize;
     Entry *cur = bucket[b];
     Entry *last = nullptr;
     while (cur) {
