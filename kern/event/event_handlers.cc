@@ -27,7 +27,7 @@ void handleUART(int eventType) {
   unsigned int base = eventType == IRQ_UART1 ? UART1_BASE : UART2_BASE;
   volatile unsigned int *intr = (unsigned int *)(base + UART_INTR_OFFSET);
   volatile unsigned int *ctrl = (unsigned int *)(base + UART_CTRL_OFFSET);
-  volatile unsigned int *flag = (unsigned int *)(base + UART_FLAG_OFFSET);
+
   unsigned int val = *intr;
   if (val & RTIS_MASK || val & RIS_MASK) {
     *ctrl &= ~RIEN_MASK;
@@ -38,10 +38,6 @@ void handleUART(int eventType) {
   }
   if (val & MIS_MASK) {
     *intr = 0;
-    if (!(*flag & CTS_MASK)) {
-      // ignore flags other than CTS
-      val -= 1;
-    }
   }
   clearEventBuffer(eventType, val);
 }

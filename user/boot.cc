@@ -31,19 +31,41 @@ void startPerfTest() {
 
 void boot() {
   create(0, nameServer);
-  create(0, uart::server);
   create(0, clockServer);
 
   create(7, idleTask);
 
-  int rply[4][2] = {{10, 20}, {23, 9}, {33, 6}, {71, 3}};
-  for (int i = 3; i <= 6; ++i) {
-    create(i, k3Client);
-  }
+  uart::bootstrap();
 
-  for (int i = 0; i < 4; ++i) {
-    int tid, msg;
-    receive(tid, msg);
-    reply(tid, rply[i]);
+  int uart1Tid = whoIs(UART1_SERVER_NAME);
+  int uart2Tid = whoIs(UART2_SERVER_NAME);
+  int clockServerTid = whoIs(CLOCK_SERVER_NAME);
+
+  putc(uart1Tid, 10);
+  putc(uart1Tid, 24);
+
+  delay(clockServerTid, 15);
+
+  for (int i = 1; i < 8; ++i) {
+    putc(uart1Tid, 34);
+    putc(uart1Tid, i);
+    delay(clockServerTid, 15);
   }
+  putc(uart1Tid, 32);
+
+  delay(clockServerTid, 500);
+
+  putc(uart1Tid, 0);
+  putc(uart1Tid, 24);
+
+  // int rply[4][2] = {{10, 20}, {23, 9}, {33, 6}, {71, 3}};
+  // for (int i = 3; i <= 6; ++i) {
+  //   create(i, k3Client);
+  // }
+
+  // for (int i = 0; i < 4; ++i) {
+  //   int tid, msg;
+  //   receive(tid, msg);
+  //   reply(tid, rply[i]);
+  // }
 }

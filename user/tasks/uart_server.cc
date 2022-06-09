@@ -35,31 +35,6 @@ struct ServerArgs {
   const char *name;
 };
 
-struct RecvNotifierArgs {
-  unsigned int channel;
-  int eventType;
-};
-
-struct SendNotifierArgs {
-  unsigned int channel;
-  int eventType;
-  bool cts;
-};
-
-int tryRecv(unsigned int channel, char *dst) {
-  volatile unsigned int *flags, *data;
-  int count = 0;
-
-  flags = (unsigned int *)(channel + UART_FLAG_OFFSET);
-  data = (unsigned int *)(channel + UART_DATA_OFFSET);
-
-  while (!(*flags & RXFE_MASK) && count < BUFFER_SIZE) {
-    dst[count] = *data;
-    ++count;
-  }
-  return count;
-}
-
 void init(const ServerArgs &args) {
   bwsetfifo(args.channel, args.fifo);
   bwsetspeed(args.channel, args.speed);
@@ -69,7 +44,7 @@ void init(const ServerArgs &args) {
 
 void recvNotifier() {
   int serverTid;
-  RecvNotifierArgs args;
+  ServerArgs args;
   receive(serverTid, args);
   reply(serverTid);
 
@@ -100,7 +75,7 @@ void recvNotifier() {
 
 void sendNotifier() {
   int serverTid;
-  SendNotifierArgs args;
+  ServerArgs args;
   receive(serverTid, args);
   reply(serverTid);
 
@@ -122,7 +97,49 @@ void sendNotifier() {
     *ctrl |= TIEN_MASK;
     while (true) {
       int status = awaitEvent(args.eventType);
-      if (status & TIEN_MASK) {
+      if (status & TIS_MASK) {
+        break;
+      }
+    }
+  }
+}
+
+void sendNotifierCTS() {
+  int serverTid;
+  ServerArgs args;
+  receive(serverTid, args);
+  reply(serverTid);
+
+  Msg msg;
+  msg.action = Send;
+
+  volatile unsigned int *flags =
+      (unsigned int *)(args.channel + UART_FLAG_OFFSET);
+  volatile unsigned int *ctrl =
+      (unsigned int *)(args.channel + UART_CTRL_OFFSET);
+
+  bool cts = (*flags & CTS_MASK);
+  bool ctsReasserted = cts;
+
+  while (true) {
+    if (!(*flags & TXFF_MASK) && ctsReasserted) {
+      ctsReasserted = false;
+      send(serverTid, msg);
+      continue;
+    }
+
+    // enable and wait for TX interrupt
+    *ctrl |= TIEN_MASK;
+    while (true) {
+      int status = awaitEvent(args.eventType);
+      if (status & MIS_MASK) {
+        bool newCts = *flags & CTS_MASK;
+        if (!cts && newCts) {
+          ctsReasserted = true;
+        }
+        cts = newCts;
+      }
+      if (ctsReasserted) {
         break;
       }
     }
@@ -136,13 +153,11 @@ void server() {
   reply(senderTid);
   init(args);
 
-  RecvNotifierArgs recvArgs{args.channel, args.eventType};
   int recvNotifierTid = create(0, recvNotifier);
-  send(recvNotifierTid, recvArgs);
+  send(recvNotifierTid, args);
 
-  SendNotifierArgs sendArgs{args.channel, args.eventType, args.cts};
-  int sendNotifierTid = create(0, sendNotifier);
-  send(sendNotifierTid, sendArgs);
+  int sendNotifierTid = create(0, args.cts ? sendNotifierCTS : sendNotifier);
+  send(sendNotifierTid, args);
 
   Queue<char, 8192> recvBuffer;
   Queue<char, 8192> sendBuffer;
