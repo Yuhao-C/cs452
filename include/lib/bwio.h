@@ -1,6 +1,8 @@
 #ifndef KERN_LIB_BWIO_H_
 #define KERN_LIB_BWIO_H_
 
+#include "kern/arch/ts7200.h"
+
 typedef const char *va_list;
 
 #define __va_argsiz(t) \
@@ -13,30 +15,27 @@ typedef const char *va_list;
 #define va_arg(ap, t) \
   (((ap) = (ap) + __va_argsiz(t)), *((t *)(void *)((ap)-__va_argsiz(t))))
 
-#define COM1 0
-#define COM2 1
-
 #define ON 1
 #define OFF 0
 
-int bwsetfifo(int channel, int state);
+int bwsetfifo(unsigned int channel, int state);
 
-int bwsetspeed(int channel, int speed);
+int bwsetspeed(unsigned int channel, int speed);
 
-int bwsetstp2(int channel, int select);
+int bwsetstp2(unsigned int channel, int select);
 
-int bwputc(int channel, char c);
+int bwputc(unsigned int channel, char c);
 
-int bwgetc(int channel);
+int bwgetc(unsigned int channel);
 
-int bwputx(int channel, char c);
+int bwputx(unsigned int channel, char c);
 
-int bwputstr(int channel, const char *str);
+int bwputstr(unsigned int channel, const char *str);
 
-int bwputr(int channel, unsigned int reg);
+int bwputr(unsigned int channel, unsigned int reg);
 
-void bwputw(int channel, int n, char fc, const char *bf);
+void bwputw(unsigned int channel, int n, char fc, const char *bf);
 
-void bwprintf(int channel, const char *format, ...);
+void bwprintf(unsigned int channel, const char *format, ...);
 
 #endif  // KERN_LIB_BWIO_H_
