@@ -27,8 +27,7 @@
 	@ switch to svc mode
 	mrs		r4, CPSR
 	add		r4, r4, #1
-	msr		SPSR_cxsf, r4
-	subs	pc, pc, #4
+	msr		CPSR, r4
 .endif
 
 	bl		enterKernel
