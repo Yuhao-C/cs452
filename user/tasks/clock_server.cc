@@ -57,12 +57,12 @@ int delayUntil(int tid, int ticks) {
 void clockNotifier() {
   int serverTid = whoIs(CLOCK_SERVER_NAME);
   int msg[2] = {Action::Update, 0};
-  int eventRet, rply;
+  int eventRet;
   while (true) {
     eventRet = awaitEvent(IRQ_TC3UI);
     assert(eventRet == 0);
     ++msg[1];
-    send(serverTid, msg, rply);
+    send(serverTid, msg);
   }
 }
 
@@ -90,7 +90,7 @@ void clockServer() {
     switch (code) {
       case Action::Update: {
         tick = payload;
-        reply(senderTid, 0);
+        reply(senderTid);
         const DelayNode *node = delayHeap.peekMin();
         while (node && node->until <= tick) {
           reply(node->tid, tick);

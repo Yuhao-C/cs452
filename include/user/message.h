@@ -15,6 +15,11 @@ int send(int tid, const M &msg, R &reply) {
 }
 
 template <typename M>
+int send(int tid, const M &msg) {
+  return send(tid, &msg, sizeof(M), nullptr, 0);
+}
+
+template <typename M>
 int receive(int &tid, M &msg) {
   return receive(&tid, &msg, sizeof(M));
 }
@@ -23,5 +28,7 @@ template <typename R>
 int reply(int tid, const R &rply) {
   return reply(tid, &rply, sizeof(R));
 }
+
+inline int reply(int tid) { return reply(tid, nullptr, 0); }
 
 #endif  // USER_MESSAGE_H_
