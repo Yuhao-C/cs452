@@ -125,7 +125,6 @@ void sendNotifierCTS() {
     if (!(*flags & TXFF_MASK) && ctsReasserted) {
       ctsReasserted = false;
       send(serverTid, msg);
-      continue;
     }
 
     // enable and wait for TX interrupt
@@ -163,6 +162,8 @@ void server() {
   Queue<char, 8192> sendBuffer;
   Queue<int, 64> getcRequestors;
 
+  bool ctsCanSend = false;
+
   volatile unsigned int *flags =
       (unsigned int *)(args.channel + UART_FLAG_OFFSET);
   volatile unsigned int *data =
@@ -183,11 +184,20 @@ void server() {
         assert(result == true);
         reply(senderTid);
 
-        while (sendBuffer.size() > 0 && !(*flags & TXFF_MASK)) {
-          *data = sendBuffer.dequeue();
-        }
-        if (*flags & TXFF_MASK) {
-          reply(sendNotifierTid);
+        if (args.cts) {
+          if (ctsCanSend && !(*flags & TXFF_MASK)) {
+            bwprintf(COM2, "putc\n\r");
+            reply(sendNotifierTid);
+            *data = sendBuffer.dequeue();
+            ctsCanSend = false;
+          }
+        } else {
+          while (sendBuffer.size() > 0 && !(*flags & TXFF_MASK)) {
+            *data = sendBuffer.dequeue();
+          }
+          if (*flags & TXFF_MASK) {
+            reply(sendNotifierTid);
+          }
         }
         break;
       case Recv:
@@ -203,11 +213,21 @@ void server() {
         }
         break;
       case Send:
-        while (sendBuffer.size() > 0 && !(*flags & TXFF_MASK)) {
-          *data = sendBuffer.dequeue();
-        }
-        if (*flags & TXFF_MASK) {
-          reply(senderTid);
+        if (args.cts) {
+          if (sendBuffer.size() > 0 && !(*flags & TXFF_MASK)) {
+            bwprintf(COM2, "send\n\r");
+            reply(senderTid);
+            *data = sendBuffer.dequeue();
+          } else {
+            ctsCanSend = true;
+          }
+        } else {
+          while (sendBuffer.size() > 0 && !(*flags & TXFF_MASK)) {
+            *data = sendBuffer.dequeue();
+          }
+          if (*flags & TXFF_MASK) {
+            reply(senderTid);
+          }
         }
         break;
     }
