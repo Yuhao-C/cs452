@@ -43,5 +43,10 @@ int main() {
     (void)request;
     // handleRequest(request);
   }
+  bwprintf(COM2,
+           "\033[31m"
+           "[kernel] FATAL: no task is ready\n\r"
+           "\033[0m");
+  kExit();
   return 0;
 }

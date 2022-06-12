@@ -59,18 +59,7 @@ void taskYield() {
   readyQueues.enqueue(curTask);
 }
 
-void taskExit() {
-  curTask->state = TaskDescriptor::State::kZombie;
-  for (int i = 0; i < tidCounter; ++i) {
-    if (!(tasks[i].state == TaskDescriptor::State::kZombie ||
-          tasks[i].state == TaskDescriptor::State::kReceiveBlocked ||
-          tasks[i].state == TaskDescriptor::State::kEventBlocked ||
-          tasks[i].priority == 7)) {
-      return;
-    }
-  }
-  kExit();
-}
+void taskExit() { curTask->state = TaskDescriptor::State::kZombie; }
 
 int taskActivate(TaskDescriptor *task) {
   curTask = task;

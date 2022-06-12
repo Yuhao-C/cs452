@@ -14,6 +14,7 @@
 #define SYS_RECEIVE 70
 #define SYS_REPLY 71
 #define SYS_AWAIT_EVENT 72
+#define SYS_SHUTDOWN 73
 
 #define SYS_IDLE_TIME 128
 

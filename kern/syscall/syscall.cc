@@ -83,6 +83,10 @@ void enterKernel(unsigned int code) {
     case SYS_AWAIT_EVENT:
       handleAwaitEvent();
       break;
+    case SYS_SHUTDOWN:
+      kExit();
+      // kExit does not return, so this line should never be reached
+      break;
     case SYS_IDLE_TIME:
       curTask->tf.r0 = idleTime / 5080;
       taskYield();
