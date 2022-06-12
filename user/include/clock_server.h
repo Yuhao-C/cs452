@@ -11,4 +11,10 @@ int delayUntil(int tid, int ticks);
 
 void clockServer();
 
+namespace clock {
+int time();
+int delay(int ticks);
+int delayUntil(int ticks);
+}  // namespace clock
+
 #endif  // USER_NAME_SERVER_H_

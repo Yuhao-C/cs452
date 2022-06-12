@@ -2,8 +2,8 @@
 
 #include "kern/syscall_code.h"
 #include "lib/assert.h"
-#include "lib/bwio.h"
 #include "lib/heap.h"
+#include "lib/io.h"
 #include "lib/timer.h"
 #include "name_server.h"
 #include "user/event.h"
@@ -23,6 +23,13 @@ struct DelayNode {
     return l.until < r.until;
   }
 };
+
+namespace clock {
+int serverTid;
+int time() { return ::time(serverTid); }
+int delay(int ticks) { return ::delay(serverTid, ticks); }
+int delayUntil(int ticks) { return ::delayUntil(serverTid, ticks); }
+}  // namespace clock
 
 int time(int tid) {
   int currTime = -1;
@@ -68,6 +75,7 @@ void clockNotifier() {
 
 void clockServer() {
   registerAs(CLOCK_SERVER_NAME);
+  clock::serverTid = myTid();
 
   int tick = 0;
   int senderTid;
@@ -114,7 +122,7 @@ void clockServer() {
         }
         break;
       default:
-        bwputstr(COM2, "[Clock Server]: fatal error unknown action\n\r");
+        println(COM2, "[Clock Server]: fatal error unknown action");
         assert(false);
     }
   }
