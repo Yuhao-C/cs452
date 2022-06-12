@@ -3,4 +3,4 @@
 
 extern "C" int awaitEvent(int eventid);
 
-#endif
+#endif  // USER_EVENT_H_

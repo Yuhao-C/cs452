@@ -2,7 +2,7 @@
 
 #include "kern/arch/ts7200.h"
 #include "kern/syscall_code.h"
-#include "lib/bwio.h"
+#include "lib/io.h"
 #include "lib/queue.h"
 #include "name_server.h"
 #include "user/event.h"
@@ -12,18 +12,6 @@
 namespace uart {
 
 const int BUFFER_SIZE = 16;
-
-enum Action {
-  Getc,
-  Putc,
-  Recv,
-  Send,
-};
-
-struct Msg {
-  Action action;
-  char data;
-};
 
 struct ServerArgs {
   unsigned int channel;
@@ -36,9 +24,9 @@ struct ServerArgs {
 };
 
 void init(const ServerArgs &args) {
-  bwsetfifo(args.channel, args.fifo);
-  bwsetspeed(args.channel, args.speed);
-  bwsetstp2(args.channel, args.stp2);
+  setfifo(args.channel, args.fifo);
+  setspeed(args.channel, args.speed);
+  setstp2(args.channel, args.stp2);
   registerAs(args.name);
 }
 
@@ -186,7 +174,6 @@ void server() {
 
         if (args.cts) {
           if (ctsCanSend && !(*flags & TXFF_MASK)) {
-            bwprintf(COM2, "putc\n\r");
             reply(sendNotifierTid);
             *data = sendBuffer.dequeue();
             ctsCanSend = false;
@@ -215,7 +202,6 @@ void server() {
       case Send:
         if (args.cts) {
           if (sendBuffer.size() > 0 && !(*flags & TXFF_MASK)) {
-            bwprintf(COM2, "send\n\r");
             reply(senderTid);
             *data = sendBuffer.dequeue();
           } else {
@@ -238,6 +224,8 @@ void bootstrap() {
   int uart1Tid = create(0, server);
   int uart2Tid = create(0, server);
 
+  ioBootstrap(uart1Tid, uart2Tid);
+
   ServerArgs args1{COM1, false, 2400, true, IRQ_UART1, true, UART1_SERVER_NAME};
   ServerArgs args2{COM2,      true,  115200,           false,
                    IRQ_UART2, false, UART2_SERVER_NAME};
@@ -247,17 +235,3 @@ void bootstrap() {
 }
 
 }  // namespace uart
-
-int getc(int tid) {
-  uart::Msg msg{uart::Action::Getc};
-  char ch;
-  int retVal = send(tid, msg, ch);
-  return retVal > -1 ? ch : -1;
-}
-
-int putc(int tid, char ch) {
-  uart::Msg msg;
-  msg.action = uart::Action::Putc;
-  msg.data = ch;
-  return send(tid, msg);
-}

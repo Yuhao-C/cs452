@@ -62,7 +62,7 @@ int bwputc(unsigned int channel, char c) {
   return 0;
 }
 
-char c2x(char ch) {
+char bwc2x(char ch) {
   if ((ch <= 9)) return '0' + ch;
   return 'a' + ch - 10;
 }
@@ -70,8 +70,8 @@ char c2x(char ch) {
 int bwputx(unsigned int channel, char c) {
   char chh, chl;
 
-  chh = c2x(c / 16);
-  chl = c2x(c % 16);
+  chh = bwc2x(c / 16);
+  chl = bwc2x(c % 16);
   bwputc(channel, chh);
   return bwputc(channel, chl);
 }

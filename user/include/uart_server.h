@@ -5,13 +5,23 @@
 #define UART2_SERVER_NAME "UART2_SERVER"
 
 namespace uart {
+
+enum Action {
+  Getc,
+  Putc,
+  Recv,
+  Send,
+};
+
+struct Msg {
+  Action action;
+  char data;
+};
+
 void server();
 void sendNotifier();
 void recvNotifier();
 void bootstrap();
 }  // namespace uart
-
-int getc(int tid);
-int putc(int tid, char ch);
 
 #endif  // USER_UART_SERVER_H_
