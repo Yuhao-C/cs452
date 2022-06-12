@@ -1,6 +1,7 @@
 #include "rps.h"
 
 #include "lib/hashtable.h"
+#include "lib/io.h"
 #include "lib/queue.h"
 #include "lib/timer.h"
 #include "name_server.h"
@@ -74,11 +75,11 @@ void server() {
       case Action::SignUp:
         play.put(clientTid, -1);
         if (waitingTid >= 0) {
-          bwprintf(COM2,
-                   "[RPS Server]: matched \033[%dm[Player %d]\033[0m and "
-                   "\033[%dm[Player %d]\033[0m\n\r",
-                   colorTable[waitingTid], waitingTid, colorTable[clientTid],
-                   clientTid);
+          println(COM2,
+                  "[RPS Server]: matched \033[%dm[Player %d]\033[0m and "
+                  "\033[%dm[Player %d]\033[0m",
+                  colorTable[waitingTid], waitingTid, colorTable[clientTid],
+                  clientTid);
           opponents.put(waitingTid, clientTid);
           opponents.put(clientTid, waitingTid);
           reply(waitingTid, colorTable[waitingTid]);
@@ -100,7 +101,7 @@ void server() {
             reply(*opponentTId, rply);
             play.put(clientTid, -1);
             play.put(*opponentTId, -1);
-            bwgetc(COM2);
+            getc(COM2);
           }
         }
         // reply to self
@@ -136,19 +137,19 @@ void server() {
             play.put(clientTid, -1);
             play.put(*opponentTId, -1);
 
-            bwgetc(COM2);
+            getc(COM2);
           }
         }
         break;
       default:
-        bwputstr(COM2, "[RPS Server]: fatal error unknown action\n\r");
+        println(COM2, "[RPS Server]: fatal error unknown action");
         assert(false);
     }
   }
 }
 
 void clientLog(int tid, int color, const char *msg) {
-  bwprintf(COM2, "\033[%dm[RPS Player %d]\033[0m: %s\n\r", color, tid, msg);
+  println(COM2, "\033[%dm[RPS Player %d]\033[0m: %s", color, tid, msg);
 }
 
 void logMove(int tid, int color, char move) {

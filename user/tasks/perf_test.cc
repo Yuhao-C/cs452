@@ -1,7 +1,7 @@
 #include "perf_test.h"
 
 #include "lib/assert.h"
-#include "lib/bwio.h"
+#include "lib/io.h"
 #include "lib/timer.h"
 #include "user/message.h"
 #include "user/task.h"
@@ -29,7 +29,7 @@ void timerTest() {
   t0 = timer::getTick(TIMER3_BASE);
   THOUSAND(t1 = timer::getTick(TIMER3_BASE));
   timerOverhead = t0 - t1;
-  bwprintf(COM2, "time for 1000 timer calls: %d ticks\r\n", timerOverhead);
+  println(COM2, "time for 1000 timer calls: %d ticks", timerOverhead);
 }
 
 void sender() {
@@ -66,7 +66,7 @@ void sender() {
     THOUSAND(send(receiverTid, msg, size, reply, size));
     unsigned int t1 = timer::getTick(TIMER3_BASE);
     (void)reply;
-    bwprintf(COM2, "%s %s %c %d %d\n\r", opt, cch, mode, size, (t0 - t1) / 508);
+    println(COM2, "%s %s %c %d %d", opt, cch, mode, size, (t0 - t1) / 508);
   }
 }
 
