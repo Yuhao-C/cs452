@@ -1,10 +1,12 @@
 #ifndef LIB_HEAP_H_
 #define LIB_HEAP_H_
 
+#include "lib/assert.h"
+
 template <typename T, int cap>
 class MinHeap {
   T heap[cap];
-  int size = 0;
+  int sz = 0;
 
   int parent(int i) { return (i - 1) / 2; }
 
@@ -22,9 +24,9 @@ class MinHeap {
   MinHeap() {}
 
   void insert(T node) {
-    assert(size < cap);
-    ++size;
-    int i = size - 1;
+    assert(sz < cap);
+    ++sz;
+    int i = sz - 1;
     heap[i] = node;
 
     while (i != 0 && heap[i] < heap[parent(i)]) {
@@ -33,29 +35,29 @@ class MinHeap {
     }
   }
 
-  const T *peekMin() { return size > 0 ? &heap[0] : nullptr; }
+  const T *peekMin() { return sz > 0 ? &heap[0] : nullptr; }
 
   void deleteMin() {
-    if (size == 0) {
+    if (sz == 0) {
       return;
     }
-    if (size == 1) {
-      --size;
+    if (sz == 1) {
+      --sz;
       return;
     }
 
-    heap[0] = heap[size - 1];
-    --size;
+    heap[0] = heap[sz - 1];
+    --sz;
 
     int i = 0;
     while (true) {
       int l = left(i);
       int r = right(i);
       int smaller = i;
-      if (l < size && heap[l] < heap[i]) {
+      if (l < sz && heap[l] < heap[i]) {
         smaller = l;
       }
-      if (r < size && heap[r] < heap[smaller]) {
+      if (r < sz && heap[r] < heap[smaller]) {
         smaller = r;
       }
       if (smaller == i) {
@@ -64,6 +66,17 @@ class MinHeap {
       swap(smaller, i);
     }
   }
+
+  bool has(const T &node) {
+    for (int i = 0; i < sz; ++i) {
+      if (node == heap[i]) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  int size() const { return sz; }
 };
 
 #endif  // LIB_HASHTABLE_H_
