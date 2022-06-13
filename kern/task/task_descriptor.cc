@@ -6,34 +6,20 @@ TaskDescriptor::TaskDescriptor(TaskDescriptor *parent, int priority, int tid)
       parent{parent},
       priority{priority},
       nextReady{nullptr},
-      nextSend{nullptr},
-      lastSend{nullptr},
+      sendQueue{},
       state{State::kReady},
       retVal{0} {}
 
 TaskDescriptor::TaskDescriptor() : TaskDescriptor{nullptr, -1, -1} {}
 
 void TaskDescriptor::enqueueSender(TaskDescriptor *sender) {
-  if (!nextSend) {
-    // empty send queue
-    kAssert(!lastSend);
-    nextSend = sender;
-  } else {
-    kAssert(lastSend);
-    lastSend->nextSend = sender;
-  }
-  lastSend = sender;
-  sender->nextSend = nullptr;
+  kAssert(sender != nullptr);
+  sendQueue.enqueue(sender);
 }
 
 TaskDescriptor *TaskDescriptor::dequeueSender() {
-  TaskDescriptor *h = nextSend;
-  if (h) {
-    nextSend = h->nextSend;
-    if (!nextSend) {
-      // send queue is empty
-      lastSend = nullptr;
-    }
+  if (sendQueue.size() > 0) {
+    return sendQueue.dequeue();
   }
-  return h;
+  return nullptr;
 }

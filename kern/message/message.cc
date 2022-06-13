@@ -62,7 +62,6 @@ void msgReceive() {
     // sender first
     kAssert(sender->state == TaskDescriptor::State::kSendBlocked);
     sender->state = TaskDescriptor::State::kReplyBlocked;
-    receiver->nextSend = sender->nextSend;
     msgCopy(sender, receiver);
     taskYield();
   } else {

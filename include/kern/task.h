@@ -1,6 +1,7 @@
 #ifndef KERN_TASK_H_
 #define KERN_TASK_H_
 
+#include "lib/queue.h"
 #include "syscall.h"
 
 #define NUM_TASKS 64
@@ -22,9 +23,8 @@ struct TaskDescriptor {
   TaskDescriptor *parent;
   int priority;
   TaskDescriptor *nextReady;
-  TaskDescriptor *nextSend;
   TaskDescriptor *nextEventBlocked;
-  TaskDescriptor *lastSend;
+  Queue<TaskDescriptor *, NUM_TASKS> sendQueue;
   State state;
   int retVal;
   Trapframe tf;
