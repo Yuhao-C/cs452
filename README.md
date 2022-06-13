@@ -33,6 +33,7 @@
       - [Explanation](#explanation-2)
     - [K4](#k4)
       - [Output](#output-3)
+      - [Explanation](#explanation-3)
 
 ## Group Member
 
@@ -460,3 +461,13 @@ Sys time can be simply retrieved by calling `time(clockServerTid)`.
 #### Output
 
 ![K4 output](program-output/k4.png)
+
+#### Explanation
+
+At the top, we show the system uptime, the idle time, and the idle fraction.
+
+At the left, we show the switches positions (switches marked as `?` is unknown)
+
+At the right, we show the 10 most recently triggered sensors and the trigger time, where the most recent one is on the top.
+
+The user can enter train commands at the bottom.
