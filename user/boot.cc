@@ -1,13 +1,16 @@
 #include "boot.h"
 
 #include "clock_server.h"
+#include "console.h"
+#include "display_server.h"
 #include "k1.h"
 #include "k3.h"
-#include "lib/bwio.h"
 #include "lib/timer.h"
+#include "marklin_server.h"
 #include "name_server.h"
 #include "perf_test.h"
 #include "rps.h"
+#include "stats.h"
 #include "uart_server.h"
 #include "user/message.h"
 #include "user/task.h"
@@ -32,40 +35,14 @@ void startPerfTest() {
 void boot() {
   create(0, nameServer);
   create(0, clockServer);
-
-  create(7, idleTask);
-
   uart::bootstrap();
 
-  int uart1Tid = whoIs(UART1_SERVER_NAME);
-  int uart2Tid = whoIs(UART2_SERVER_NAME);
-  int clockServerTid = whoIs(CLOCK_SERVER_NAME);
+  create(1, marklin::cmdServer);
 
-  putc(uart1Tid, 10);
-  putc(uart1Tid, 24);
+  create(2, view::displayServer);
+  create(2, consoleReader);
 
-  delay(clockServerTid, 15);
+  create(3, stats);
 
-  for (int i = 1; i < 8; ++i) {
-    putc(uart1Tid, 34);
-    putc(uart1Tid, i);
-    delay(clockServerTid, 15);
-  }
-  putc(uart1Tid, 32);
-
-  delay(clockServerTid, 500);
-
-  putc(uart1Tid, 0);
-  putc(uart1Tid, 24);
-
-  // int rply[4][2] = {{10, 20}, {23, 9}, {33, 6}, {71, 3}};
-  // for (int i = 3; i <= 6; ++i) {
-  //   create(i, k3Client);
-  // }
-
-  // for (int i = 0; i < 4; ++i) {
-  //   int tid, msg;
-  //   receive(tid, msg);
-  //   reply(tid, rply[i]);
-  // }
+  create(7, idleTask);
 }
