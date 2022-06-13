@@ -188,7 +188,6 @@ void format(unsigned int channel, const char *fmt, va_list va) {
         case '0':
           lz = '0';
           ch = *(fmt++);
-          break;
         case '1':
         case '2':
         case '3':
