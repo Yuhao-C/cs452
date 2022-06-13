@@ -19,6 +19,8 @@
     "bwputc",
     "bwputstr",
     "CPSR",
+    "marklin",
+    "putstr",
     "spsr",
     "Trapframe"
   ]
