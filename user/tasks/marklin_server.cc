@@ -84,7 +84,7 @@ void reverseTask() {
 
 void querySensors() {
   Sensor sensor{0, 0, {0}, {0}, {{0, 0}}};
-
+  bool firstRead = true;
   int marklinServerTid = whoIs(MARKLIN_SERVER_NAME);
   int displayServerTid = whoIs(DISPLAY_SERVER_NAME);
   while (true) {
@@ -108,6 +108,10 @@ void querySensors() {
         }
         ++bitIdx;
       }
+    }
+    if (firstRead) {
+      firstRead = false;
+      continue;
     }
     if (updated) {
       view::Msg msg;

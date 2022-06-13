@@ -28,6 +28,16 @@ void init(const ServerArgs &args) {
   setspeed(args.channel, args.speed);
   setstp2(args.channel, args.stp2);
   registerAs(args.name);
+
+  // make sure UART1 receive is empty
+  if (args.channel == COM1) {
+    volatile int *flags, *data;
+    flags = (int *)(args.channel + UART_FLAG_OFFSET);
+    data = (int *)(args.channel + UART_DATA_OFFSET);
+    while (!(*flags & RXFE_MASK)) {
+      (void)*data;
+    }
+  }
 }
 
 void recvNotifier() {
