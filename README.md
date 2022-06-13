@@ -18,6 +18,9 @@
       - [Event Notification: Event-Blocked Queues](#event-notification-event-blocked-queues)
     - [Clock Server](#clock-server)
       - [Clock Server: Min-Heap](#clock-server-min-heap)
+    - [UART Server](#uart-server)
+      - [UART Server: Queue](#uart-server-queue)
+    - [Display Server / Marklin Server](#display-server--marklin-server)
   - [Program Output](#program-output)
     - [K1](#k1)
       - [Output](#output)
@@ -28,6 +31,8 @@
     - [K3](#k3)
       - [Output](#output-2)
       - [Explanation](#explanation-2)
+    - [K4](#k4)
+      - [Output](#output-3)
 
 ## Group Member
 
@@ -50,76 +55,22 @@ make install # transfer kmain.elf to the tftp server
 ```dockerfile
 cs452/
 ├── include/
-│   ├── kern/
-│   │   ├── arch/
-│   │   │   └── ts7200.h # ts7200 registers definition
-│   │   ├── common.h  # declare common type and helper
-│   │   ├── event.h   # declare event-related constants and functions
-│   │   ├── kmem.h    # declare constants for memory sections
-│   │   ├── message.h # declare kernel send-receive-reply handler
-│   │   ├── sys.h     # declare kExit (exit kernel)
-│   │   ├── syscall_code.h # define syscall codes
-│   │   ├── syscall.h # declare Trapframe and syscall functions
-│   │   └── task.h    # declare kernel task handler
-│   ├── lib/
-│   │   ├── assert.h # declare assert utility
-│   │   ├── bwio.h   # declare busy-wait I/O routines
-│   │   ├── hashtable.h # declare hashtable
-│   │   ├── heap.h # declare a min-heap
-│   │   ├── math.h # declare math utility functions
-│   │   ├── queue.h # declare queue
-│   │   ├── string.h # declare string wrapper
-│   │   └── timer.h # declare timer functions
-│   └── user/
-│       ├── event.h # declare user event API
-│       ├── message.h # declare user send-receive-reply
-│       └── task.h # declare user task interface
+│   ├── kern/ # header files for kernel code
+│   ├── lib/  # header files for libraries
+│   └── user/ # header files for syscalls
 ├── kern/
-│   ├── event/
-│   │   ├── event.cc # define bootstrap code and syscall handler for awaitEvent
-│   │   └── event_handlers.cc # define event handlers for each type of event
-│   ├── lib/
-│   │   └── sys.cc # define kExit (exit kernel)
-│   ├── message/
-│   │   └── message.cc # define kern send-receive-reply handler
-│   ├── syscall/
-│   │   ├── exception.S # save and restore user and kernel stack
-│   │   ├── syscall_user.S # define all syscall functions that we expose to user
-│   │   └── syscall.cc  # define enterKernel and leaveKernel
-│   ├── task/
-│   │   ├── priority_queues.cc # define PriorityQueues class
-│   │   ├── task_descriptor.cc # define TaskDescriptor class
-│   │   └── task_kern.cc       # define kernel task handler
+│   ├── event/    # kernel code for interrupt handling
+│   ├── lib/      # kernel lib code
+│   ├── message/  # kernel code for message passing
+│   ├── syscall/  # kernel code for syscall/interrupt handling
+│   ├── task/     # kernel code for task management
 │   └── kmain.cc  # kernel entry
-├── lib/
-│   ├── assert.cc # define assert utility
-│   ├── bwio.cc   # define busy-wait I/O routines
-│   ├── hashtable.cc # define hashtable
-│   ├── math.cc   # define math utility functions
-│   ├── queue.cc  # define queue
-│   ├── string.cc # define string wrapper
-│   └── timer.cc  # define timer functions
-├── user/
-│   ├── include/
-│   │   ├── boot.h # declare first user task and its priority
-│   │   ├── clock_server.h # declare clock server
-│   │   ├── k1.h   # declare k1 user task
-│   │   ├── k3.h   # declare k3 user task
-│   │   ├── name_server.h # declare name server
-│   │   ├── perf_test.h # declare performance test
-│   │   └── rps.h # declare RPS server and Client
-│   ├── tasks/
-│   │   ├── clock_server.cc # define clock server
-│   │   ├── k1.cc   # define k1 user task
-│   │   ├── k3.cc   # define k3 user task
-│   │   ├── name_server.h # define name server
-│   │   ├── perf_test.h # define performance
-│   │   └── rps.cc  # define RPS server and Client
-│   └── boot.cc  # user program entry
-├── .gitignore
-├── linker.ld
-├── Makefile
-└── README.md
+├── lib/          # common lib code
+└── user/
+    ├── include/  # header files for user tasks
+    ├── tasks/    # user tasks implementation
+    └── boot.cc   # user program entry
+
 ```
 
 ## Kernel Description
@@ -197,9 +148,7 @@ Note: The number of tasks and the stack size for each task can be made larger by
 #### Message Passing: Send Queues
 
 Each task has a send queue which stores all tasks that are trying to send message to the task.
-The task queues are implemented as a linked list where the linkage is stored as a pointer in `TaskDescriptor::nextSend`. To allow efficient enqueue, a pointer to the end of each queue is stored in `TaskDescriptor::lastSend`. The front of a task's send queue is also stored in `TaskDescriptor::nextSend`.
-
-Notice that although each task has a send queue individually, we only maintain one `nextSend` pointer in each `TaskDescriptor`. This is because a task cannot be in more than one send queues at the same time. When the task is present in a send queue, it is always _send-blocked_ and waiting for the receiver to receive its message, so the task cannot send to another receiver at the same time. This also allows us to store both the front of a queue and the linked-list linkage at the same field `nextSend`. The `nextSend` field in a _send-blocked_ task stores the linked-list linkage, while the same field in a task that is not _send-blocked_ stores the front of its send queue. When a task is not _send-blocked_, it is not trying to send anything as thus not in any send queue. This ensures we can distinguish the different interpretations of `nextSend` and each send queue is standalone and the linkages are not mixed.
+The task queues are implemented as a ring buffer (`include/lib/queue.h`)to allow efficient enqueue and dequeue.
 
 ### Name Server
 
@@ -261,6 +210,46 @@ We have implemented a min-heap using array, that supports the following operatio
 - `deleteMin`
   - delete the smallest item from the min heap
   - $`O(\log n)`$
+
+### UART Server
+
+`user/tasks/uart_server.cc`
+
+Each UART line has a dedicated server. The UART server is configurable with the following arguments. Upon creation, it receives its arguments from its parent by calling `receive`.
+
+```cpp
+struct ServerArgs {
+  unsigned int channel; // COM1 or COM2
+  bool fifo; // whether fifo is enabled
+  int speed; // baud rate
+  bool stp2; // whether stop bit is 2
+  int eventType; // which UART interrupt to wait for
+  bool cts; // whether CTS is enabled
+  const char *name; // name of the server
+};
+```
+
+Each server creates a receive notifier and a send notifier. To accommodate different transmit/receive logic. Each notifier also accepts arguments by message passing.
+
+- receive notifier (`recvNotifier`)
+  - notifies the corresponding server whenever a character is received from the UART line, then the server read from the corresponding register to perform the actual receive
+- send notifier (`sendNotifier`)
+  - notifies the corresponding server whenever the UART line is ready for send, then the server write to the corresponding register
+  - send notifier is responsible for handling CTS if enabled
+
+#### UART Server: Queue
+
+Each UART server has a send queue and a receive queue used a buffers. These are implemented as ring buffers with a capacity of 8192 bytes.
+
+`putc` puts a character into the send queue. When UART is ready to send, a character is dequeued and sent.
+
+When a byte arrives, it is put into the receive queue. When a task call `getc`, a character is dequeued and replied. However, if the receive queue is empty, it waits until one character arrives and reply it to the calling task.
+
+There is another queue `getcRequestors`. When there are multiple tasks waiting for `getc`, they are queued up in `getcRequestors`. And when a character arrives, the server replies to the first task in the queue. Each character is replied to only one task.
+
+### Display Server / Marklin Server
+
+The problem of synchronization arises when we enable interrupts. If multiple tasks try to send characters, the order of sending is nondeterministic. So we have a display server that handles all printing to the terminal, and a marklin server that handles all the commands sent to the train to ensure that bytes that should be sent together do not get separated.
 
 ## Program Output
 
@@ -465,3 +454,9 @@ This is done by having a counter inside the idle task, and increment it by 1 in 
 Idle time is recorded by the kernel by having a counter that accumulates each time the kernel switches to the idle task and comes back from it, using `timer2`.
 
 Sys time can be simply retrieved by calling `time(clockServerTid)`.
+
+### K4
+
+#### Output
+
+![K4 output](program-output/k4.png)
