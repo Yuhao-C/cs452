@@ -39,7 +39,7 @@ void msgSend() {
   }
 
   TaskDescriptor *sender = curTask;
-  TaskDescriptor *receiver = &tasks[tid];
+  TaskDescriptor *receiver = getTd(tid);
 
   if (receiver->state == TaskDescriptor::State::kReceiveBlocked) {
     // receiver first
@@ -80,7 +80,7 @@ void msgReply() {
     taskYield();
     return;
   }
-  TaskDescriptor *sender = &tasks[tid];
+  TaskDescriptor *sender = getTd(tid);
   if (sender->state != TaskDescriptor::State::kReplyBlocked) {
     curTask->tf.r0 = -2;
     taskYield();

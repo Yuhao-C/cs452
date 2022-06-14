@@ -3,28 +3,32 @@
 #include "kern/task.h"
 #include "lib/bwio.h"
 #include "user/task.h"
+#include "lib/queue.h"
+
+#define USER_STACK_START 0x1000000
 
 TaskDescriptor tasks[NUM_TASKS];
 TaskDescriptor *curTask;
 
 PriorityQueues readyQueues;
-
-int tidCounter;
-addr_t userStack;
+Queue<int, 64> tidPool;
 
 void taskBootstrap() {
   for (int i = 0; i < NUM_TASKS; ++i) {
     tasks[i] = TaskDescriptor{};
   }
   curTask = nullptr;
-  tidCounter = 0;
-  userStack = 0x1000000;
   readyQueues = PriorityQueues();
+  tidPool = Queue<int, 64>{};
+  for (int i = 0; i < NUM_TASKS; ++i) {
+    bool enqueueDone = tidPool.enqueue(i);
+    kAssert(enqueueDone);
+  }
 }
 
 void taskStart(void (*fn)()) {
   fn();
-  exit();
+  destroy();
 }
 
 void taskCreate(Trapframe *tf) {
@@ -34,24 +38,24 @@ void taskCreate(Trapframe *tf) {
     tf->r0 = -1;
     return;
   }
-  if (tidCounter >= NUM_TASKS) {
+  if (tidPool.size() == 0) {
     tf->r0 = -2;
     return;
   }
 
-  TaskDescriptor &task = tasks[tidCounter];
-  task = TaskDescriptor{curTask, priority, tidCounter};
+  int tid = tidPool.dequeue();
+  int index = tid % NUM_TASKS;
+  addr_t stack = USER_STACK_START - index * USER_STACK_SIZE;
+  TaskDescriptor &task = tasks[index];
+  kAssert(!isTidValid(tid)); // tid must be invalid at this point
+  task = TaskDescriptor{curTask->tid, priority, tid};
   task.tf.r0 = fn;
-  task.tf.r11 = userStack;  // frame pointer
-  task.tf.r13 = userStack;  // stack pointer
+  task.tf.r11 = stack;  // frame pointer
+  task.tf.r13 = stack;  // stack pointer
   task.tf.lrSVC = (unsigned int)taskStart;
   task.tf.spsr = 0b10000;
   readyQueues.enqueue(&task);
-
   tf->r0 = task.tid;  // return tid in r0
-
-  ++tidCounter;
-  userStack -= USER_STACK_SIZE;
 }
 
 void taskYield() {
@@ -60,6 +64,12 @@ void taskYield() {
 }
 
 void taskExit() { curTask->state = TaskDescriptor::State::kZombie; }
+
+void taskDestroy() {
+  tidPool.enqueue(curTask->tid + NUM_TASKS);
+  curTask->tid = -1;
+  curTask->state = TaskDescriptor::State::kZombie;
+}
 
 int taskActivate(TaskDescriptor *task) {
   curTask = task;
@@ -72,6 +82,17 @@ int taskActivate(TaskDescriptor *task) {
 
 TaskDescriptor *taskSchedule() { return readyQueues.dequeue(); }
 
+TaskDescriptor *getTd(int tid) {
+  if (tid == -1) {
+    return nullptr;
+  }
+  TaskDescriptor *td = &tasks[tid % NUM_TASKS];
+  if (td->tid == tid) {
+    return td;
+  }
+  return nullptr;
+}
+
 bool isTidValid(int tid) {
-  return 0 <= tid && tid < NUM_TASKS && tasks[tid].tid != -1;
+  return getTd(tid) != nullptr;
 }

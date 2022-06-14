@@ -11,5 +11,7 @@ int myParentTid();
 void yield();
 
 void exit();
+
+void destroy();
 }
 #endif  // USER_TASK_H_

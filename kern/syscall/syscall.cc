@@ -62,7 +62,7 @@ void enterKernel(unsigned int code) {
       taskYield();
       break;
     case SYS_PARENT_TID:
-      curTask->tf.r0 = curTask->parent ? curTask->parent->tid : -1;
+      curTask->tf.r0 = curTask->parentTid;
       taskYield();
       break;
     case SYS_YIELD:
@@ -70,6 +70,9 @@ void enterKernel(unsigned int code) {
       break;
     case SYS_EXIT:
       taskExit();
+      break;
+    case SYS_DESTROY:
+      taskDestroy();
       break;
     case SYS_SEND:
       msgSend();

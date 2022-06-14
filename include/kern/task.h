@@ -20,7 +20,7 @@ struct TaskDescriptor {
   };
 
   int tid;
-  TaskDescriptor *parent;
+  int parentTid;
   int priority;
   TaskDescriptor *nextReady;
   TaskDescriptor *nextEventBlocked;
@@ -29,7 +29,7 @@ struct TaskDescriptor {
   int retVal;
   Trapframe tf;
 
-  TaskDescriptor(TaskDescriptor *parent, int priority, int tid);
+  TaskDescriptor(int parentTid, int priority, int tid);
   TaskDescriptor();
   void enqueueSender(TaskDescriptor *sender);
   TaskDescriptor *dequeueSender();
@@ -47,7 +47,6 @@ class PriorityQueues {
   bool isEmpty(int priority);
 };
 
-extern int tidCounter;
 extern TaskDescriptor tasks[NUM_TASKS];
 extern TaskDescriptor *curTask;
 extern PriorityQueues readyQueues;
@@ -62,9 +61,13 @@ void taskYield();
 
 void taskExit();
 
+void taskDestroy();
+
 int taskActivate(TaskDescriptor *task);
 
 TaskDescriptor *taskSchedule();
+
+TaskDescriptor *getTd(int tid);
 
 bool isTidValid(int tid);
 

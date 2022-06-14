@@ -1,16 +1,16 @@
 #include "kern/task.h"
 #include "lib/assert.h"
 
-TaskDescriptor::TaskDescriptor(TaskDescriptor *parent, int priority, int tid)
+TaskDescriptor::TaskDescriptor(int parentTid, int priority, int tid)
     : tid{tid},
-      parent{parent},
+      parentTid{parentTid},
       priority{priority},
       nextReady{nullptr},
       sendQueue{},
       state{State::kReady},
       retVal{0} {}
 
-TaskDescriptor::TaskDescriptor() : TaskDescriptor{nullptr, -1, -1} {}
+TaskDescriptor::TaskDescriptor() : TaskDescriptor{-1, -1, -1} {}
 
 void TaskDescriptor::enqueueSender(TaskDescriptor *sender) {
   kAssert(sender != nullptr);
