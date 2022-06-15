@@ -14,7 +14,7 @@ AS = $(XBINDIR)/arm-none-eabi-as
 LD = $(XBINDIR)/arm-none-eabi-ld
 
 # C preprocessor flags
-CPPFLAGS = -I./include -I./user/include -MMD -MP
+CPPFLAGS = -I./include -I./user/include -I./track/include -MMD -MP
 
 # C++ compiler flags
 # -g: include debug information for gdb
