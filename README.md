@@ -34,6 +34,13 @@
     - [K4](#k4)
       - [Output](#output-3)
       - [Explanation](#explanation-3)
+  - [Train Measurement](#train-measurement)
+    - [Train 1](#train-1)
+    - [Train 24](#train-24)
+    - [Train 58](#train-58)
+    - [Train 74](#train-74)
+    - [Train 78](#train-78)
+    - [Train 79](#train-79)
 
 ## Group Member
 
@@ -471,3 +478,91 @@ At the left, we show the switches positions (switches marked as `?` is unknown)
 At the right, we show the 10 most recently triggered sensors and the trigger time, where the most recent one is on the top.
 
 The user can enter train commands at the bottom.
+
+## Train Measurement
+
+The raw train measurement data is under `train-measurement/`.
+
+We measure the speed and stopping distance for 8 speeds level (7-14). For each speed level, their speed and stopping distance differs depending on whether the previous speed level is lower or higher. So there are two sets of speed and stopping distance measurement for each speed level (excluding 14 since its the top speed).
+
+For speed measurement, we set the train to go around in a loop. We first set a train to a certain speed level then use sensor `C10` to measure the time `t1` when the train first hits that sensor, and time `t2` when the train hits that sensor the second time. Then by calculating the distance in this loop, we are able to calculate its velocity.
+
+For stopping distance measurement, we set the train to a certain speed level, then the program will send the stop command whenever the train hits `E8`. Then we use a ruler to measure the distance from `E8` to the tip under the train that triggered the sensor.
+
+### Train 1
+
+| level | speed inc (mm/s) | speed dec (mm/s) | stop distance inc (mm) | stop distance dec (mm) |
+| ----- | ---------------- | ---------------- | ---------------------- | ---------------------- |
+| 7     | 164.64           | 192.18           | 147.00                 | 175.00                 |
+| 8     | 218.87           | 246.52           | 218.00                 | 256.67                 |
+| 9     | 282.34           | 311.36           | 311.00                 | 380.00                 |
+| 10    | 343.71           | 369.00           | 436.00                 | 503.00                 |
+| 11    | 410.94           | 444.63           | 586.33                 | 680.67                 |
+| 12    | 475.45           | 510.87           | 782.00                 | 886.00                 |
+| 13    | 547.44           | 576.54           | 993.33                 | 1112.00                |
+| 14    | 619.42           | n/a              | 1275.00                | n/a                    |
+
+### Train 24
+
+| level | speed inc (mm/s) | speed dec (mm/s) | stop distance inc (mm) | stop distance dec (mm) |
+| ----- | ---------------- | ---------------- | ---------------------- | ---------------------- |
+| 7     | 169.85           | 198.31           | 148.00                 | 183.00                 |
+| 8     | 225.43           | 254.87           | 222.67                 | 263.00                 |
+| 9     | 288.80           | 322.11           | 324.33                 | 384.00                 |
+| 10    | 356.86           | 383.88           | 452.00                 | 510.67                 |
+| 11    | 422.48           | 461.35           | 613.67                 | 697.67                 |
+| 12    | 497.25           | 521.14           | 805.67                 | 903.67                 |
+| 13    | 559.26           | 568.11           | 1031.67                | 1134.67                |
+| 14    | 614.52           | n/a              | 1278.00                | n/a                    |
+
+### Train 58
+
+| level | speed inc (mm/s) | speed dec (mm/s) | stop distance inc (mm) | stop distance dec (mm) |
+| ----- | ---------------- | ---------------- | ---------------------- | ---------------------- |
+| 7     | 152.72           | 177.35           | 136.00                 | 147.00                 |
+| 8     | 198.73           | 230.10           | 180.33                 | 227.67                 |
+| 9     | 262.03           | 288.80           | 283.67                 | 330.33                 |
+| 10    | 321.89           | 350.17           | 410.00                 | 455.00                 |
+| 11    | 387.71           | 426.73           | 555.67                 | 640.00                 |
+| 12    | 460.89           | 497.25           | 733.33                 | 828.67                 |
+| 13    | 532.44           | 572.29           | 939.33                 | 1047.00                |
+| 14    | 624.39           | n/a              | 1250.67                | n/a                    |
+
+### Train 74
+
+| level | speed inc (mm/s) | speed dec (mm/s) | stop distance inc (mm) | stop distance dec (mm) |
+| ----- | ---------------- | ---------------- | ---------------------- | ---------------------- |
+| 7     | 340.95           | 340.70           | 413.00                 | 419.67                 |
+| 8     | 395.94           | 395.61           | 473.67                 | 472.67                 |
+| 9     | 452.83           | 452.40           | 541.00                 | 532.67                 |
+| 10    | 496.72           | 503.69           | 601.00                 | 588.67                 |
+| 11    | 563.99           | 563.99           | 676.33                 | 673.33                 |
+| 12    | 614.52           | 618.59           | 762.67                 | 735.67                 |
+| 13    | 661.59           | 668.22           | 814.67                 | 811.00                 |
+| 14    | 668.22           | n/a              | 837.33                 | n/a                    |
+
+### Train 78
+
+| level | speed inc (mm/s) | speed dec (mm/s) | stop distance inc (mm) | stop distance dec (mm) |
+| ----- | ---------------- | ---------------- | ---------------------- | ---------------------- |
+| 7     | 131.53           | 166.88           | 106.33                 | 131.67                 |
+| 8     | 178.16           | 206.29           | 162.67                 | 190.33                 |
+| 9     | 232.17           | 258.40           | 233.00                 | 280.33                 |
+| 10    | 281.31           | 319.25           | 315.67                 | 364.00                 |
+| 11    | 339.21           | 380.13           | 427.67                 | 508.00                 |
+| 12    | 402.09           | 434.69           | 582.00                 | 658.33                 |
+| 13    | 455.04           | 487.89           | 744.00                 | 828.33                 |
+| 14    | 517.67           | n/a              | 941.33                 | n/a                    |
+
+### Train 79
+
+| level | speed inc (mm/s) | speed dec (mm/s) | stop distance inc (mm) | stop distance dec (mm) |
+| ----- | ---------------- | ---------------- | ---------------------- | ---------------------- |
+| 7     | 212.11           | 235.21           | 150.67                 | 176.67                 |
+| 8     | 260.13           | 293.35           | 218.33                 | 277.67                 |
+| 9     | 321.89           | 353.35           | 315.00                 | 377.00                 |
+| 10    | 385.79           | 422.48           | 439.33                 | 528.00                 |
+| 11    | 460.89           | 497.25           | 606.67                 | 695.00                 |
+| 12    | 531.84           | 563.99           | 777.00                 | 899.67                 |
+| 13    | 604.17           | 651.42           | 1002.33                | 1141.33                |
+| 14    | 695.11           | n/a              | 1275.67                | n/a                    |
