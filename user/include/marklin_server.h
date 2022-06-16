@@ -53,6 +53,8 @@ struct Sensor {
   char data[SENSOR_CAP];
   char status[SENSOR_CAP];
   MrvNode mostRecentlyVisited[MRV_CAP];
+
+  static void getSensorName(int sensorIdx, char &sensorGroup, int &sensorNum);
 };
 
 void cmdServer();

@@ -121,8 +121,9 @@ void renderSensor(Cursor &cursor, int *data, int len) {
     int sensorTime = data[i * 2 + 1];
     int sensorTimeMin, sensorTimeSec, sensorTimeMs;
     parseTime(sensorTime, sensorTimeMin, sensorTimeSec, sensorTimeMs);
-    char sensorGroup = sensorIdx / 16 + 65;
-    int sensorNum = sensorIdx % 16 + 1;
+    char sensorGroup;
+    int sensorNum;
+    marklin::Sensor::getSensorName(sensorIdx, sensorGroup, sensorNum);
     printf(COM2, "%d)\t%c%02d\t%02d:%02d.%d", i + 1, sensorGroup, sensorNum,
            sensorTimeMin, sensorTimeSec, sensorTimeMs / 100);
     cursor.set(cursor.r + 1, cursor.initC);

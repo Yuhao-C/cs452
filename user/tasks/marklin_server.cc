@@ -42,6 +42,11 @@ Msg Msg::solenoidOff() { return {Action::SwitchCmd, {SWITCH_OFF}, 1}; }
 
 Msg Msg::querySensors() { return {Action::Cmd, {SENSOR}, 1}; }
 
+void Sensor::getSensorName(int sensorIdx, char &sensorGroup, int &sensorNum) {
+  sensorGroup = sensorIdx / 16 + 'A';
+  sensorNum = sensorIdx % 16 + 1;
+}
+
 void cmdDelegate() {
   int cmdServerTid = whoIs(MARKLIN_SERVER_NAME);
   Msg readyMsg{Msg::Action::Ready, {}, 0};
