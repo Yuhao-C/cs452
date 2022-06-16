@@ -1,14 +1,14 @@
 /* THIS FILE IS GENERATED CODE -- DO NOT EDIT */
 
-#include "track_data.h"
+#include "../include/track_data.h"
 
 static void *memset(void *s, int c, unsigned int n) {
-  unsigned char *p = s;
+  unsigned char *p = (unsigned char *)s;
   while(n --> 0) { *p++ = (unsigned char)c; }
   return s;
 }
 
-void init_tracka(track_node *track) {
+int init_tracka(track_node *track) {
   memset(track, 0, TRACK_MAX*sizeof(track_node));
   track[0].name = "A1";
   track[0].type = NODE_SENSOR;
@@ -1190,9 +1190,10 @@ void init_tracka(track_node *track) {
   track[143].name = "EX10";
   track[143].type = NODE_EXIT;
   track[143].reverse = &track[142];
+  return 144;
 }
 
-void init_trackb(track_node *track) {
+int init_trackb(track_node *track) {
   memset(track, 0, TRACK_MAX*sizeof(track_node));
   track[0].name = "A1";
   track[0].type = NODE_SENSOR;
@@ -2354,4 +2355,5 @@ void init_trackb(track_node *track) {
   track[139].name = "EX10";
   track[139].type = NODE_EXIT;
   track[139].reverse = &track[138];
+  return 140;
 }
