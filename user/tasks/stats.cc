@@ -7,12 +7,13 @@
 void stats() {
   int displayServerTid = whoIs(DISPLAY_SERVER_NAME);
   int clockServerTid = whoIs(CLOCK_SERVER_NAME);
+  int t = 0;
 
   while (true) {
     unsigned int idleTime = getIdleTime();
     unsigned int sysTime = time(clockServerTid);
     view::Msg msg{view::Action::Time, {sysTime, idleTime}};
     send(displayServerTid, msg);
-    clock::delay(10);
+    clock::delayUntil(t += 10);
   }
 }
