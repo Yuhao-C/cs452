@@ -5,20 +5,12 @@
 #include "lib/io.h"
 #include "lib/math.h"
 #include "lib/queue.h"
+#include "marklin/predictor.h"
 #include "name_server.h"
 #include "user/message.h"
 #include "user/task.h"
 
 namespace marklin {
-
-const int REVERSE = 15;
-const int LIGHT_ON = 16;
-const int SWITCH_OFF = 32;
-const int SWITCH_S = 33;
-const int SWITCH_C = 34;
-const int GO = 96;
-const int STOP = 97;
-const int SENSOR = 133;
 
 int Msg::getTrainId() const { return data[1]; }
 
@@ -92,6 +84,7 @@ void querySensors() {
   bool firstRead = true;
   int marklinServerTid = whoIs(MARKLIN_SERVER_NAME);
   int displayServerTid = whoIs(DISPLAY_SERVER_NAME);
+  int predictorTid = whoIs(PREDICTOR_NAME);
   while (true) {
     send(marklinServerTid, Msg::querySensors());
     bool updated = false;
@@ -103,13 +96,18 @@ void querySensors() {
         if (bit == 0) {
           sensor.status[bitIdx] = 0;
         } else if (sensor.status[bitIdx] == 0) {
+          int currTime = clock::time();
           updated = true;
           sensor.status[bitIdx] = 1;
-          sensor.mostRecentlyVisited[sensor.mrvIdx] =
-              MrvNode{bitIdx, clock::time()};
+          sensor.mostRecentlyVisited[sensor.mrvIdx] = MrvNode{bitIdx, currTime};
           sensor.mrvIdx = (sensor.mrvIdx + 1) % MRV_CAP;
           sensor.mrvSize =
               sensor.mrvSize >= MRV_CAP ? MRV_CAP : sensor.mrvSize + 1;
+          while (predictorTid < 0) {
+            predictorTid = whoIs(PREDICTOR_NAME);
+          }
+          send(predictorTid,
+               Msg{Msg::Action::SensorTriggered, {bitIdx, currTime}, 2});
         }
         ++bitIdx;
       }

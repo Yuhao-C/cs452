@@ -7,6 +7,7 @@
 #include "k3.h"
 #include "lib/timer.h"
 #include "marklin_server.h"
+#include "marklin/predictor.h"
 #include "name_server.h"
 #include "perf_test.h"
 #include "rps.h"
@@ -38,6 +39,8 @@ void boot() {
   uart::bootstrap();
 
   create(1, marklin::cmdServer);
+
+  create(1, marklin::runPredictor);
 
   create(2, view::displayServer);
   create(2, consoleReader);

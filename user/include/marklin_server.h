@@ -8,15 +8,26 @@ namespace marklin {
 #define MRV_CAP 10
 #define SENSOR_CAP 80
 
+const int REVERSE = 15;
+const int LIGHT_ON = 16;
+const int SWITCH_OFF = 32;
+const int SWITCH_S = 33;
+const int SWITCH_C = 34;
+const int GO = 96;
+const int STOP = 97;
+const int SENSOR = 133;
+
 struct Msg {
   enum class Action {
-    Ready = 0,            // data = {}
-    SwitchReady,          // data = {}
-    Cmd,                  // data = {cmd1[, cmd2]}
-    ReverseReady = 0x10,  // data = {0, trainId}
-    TrainCmd,             // data = {speed, trainId}
-    ReverseCmd,           // data = {0, trainId}
-    SwitchCmd = 0x20      // data = {direction, switchId}
+    Ready = 0,               // data = {}
+    SwitchReady,             // data = {}
+    Cmd,                     // data = {cmd1[, cmd2]}
+    ReverseReady = 0x10,     // data = {0, trainId}
+    TrainCmd,                // data = {speed, trainId}
+    ReverseCmd,              // data = {0, trainId}
+    SwitchCmd = 0x20,        // data = {direction, switchId}
+    InitTrack = 0x30,        // data = {trackSet}
+    SensorTriggered = 0x100  // data = {sensorNum, tick}
   };
   Action action;
   int data[2];

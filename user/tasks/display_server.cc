@@ -155,6 +155,22 @@ void renderTime(Cursor &cursor, int *data) {
   cursor.deleteLine();
 }
 
+void renderPredict(Cursor &cursor, int *data) {
+  int nextSensorNum = data[0];
+  int nextSensorTick = data[1];
+  int isLastPredictValid = data[2];
+  int timeDiff = data[3];
+  int distDiff = data[4];
+  char sensorGroup;
+  int sensorNum;
+  marklin::Sensor::getSensorName(nextSensorNum, sensorGroup, sensorNum);
+
+  Cursor::hideCursor();
+  cursor.setC(1);
+  printf(COM2, "next %c%02d", sensorGroup, sensorNum);
+  cursor.deleteLine();
+}
+
 void displayServer() {
   registerAs(DISPLAY_SERVER_NAME);
   putstr(COM2, "\033[2J");  // clear screen
@@ -162,6 +178,8 @@ void displayServer() {
   int senderTid = -1;
 
   Cursor timeCursor{1, 1};
+  
+  Cursor predictCursor{3, 1};
 
   Cursor switchCursor{5, 13};
   switchInit();
@@ -190,6 +208,9 @@ void displayServer() {
         break;
       case Time:
         renderTime(timeCursor, msg.data);
+        break;
+      case Predict:
+        renderPredict(predictCursor, msg.data);
         break;
       case InvalidCmd:
         renderInvalidCmd(invalidCmdCursor, msg.data[0]);

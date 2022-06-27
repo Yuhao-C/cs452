@@ -4,6 +4,7 @@
 #include "lib/queue.h"
 #include "lib/string.h"
 #include "marklin_server.h"
+#include "marklin/predictor.h"
 #include "name_server.h"
 #include "uart_server.h"
 #include "user/message.h"
@@ -37,7 +38,7 @@ void clearInvalidCommand(int displayServerTid) {
   send(displayServerTid, msg);
 }
 
-void handleCmd(char* cmd, int displayServerTid, int marklinServerTid) {
+void handleCmd(char* cmd, int displayServerTid, int marklinServerTid, int predictTid) {
   char word[32];
   char a2iRes;
   const char* temp_word;
@@ -109,6 +110,18 @@ void handleCmd(char* cmd, int displayServerTid, int marklinServerTid) {
     send(marklinServerTid, marklin::Msg::sw(switchDirection, switchNum));
     send(displayServerTid,
          view::Msg{view::Action::Switch, {switchDirection, switchNum}});
+    send(predictTid, marklin::Msg::sw(switchDirection, switchNum));
+  } else if (String{word} == "track") {
+    char track;
+    readWord(&cmd, word);
+    if ((word[0] == 'A' || word[0] == 'B') && word[1] == 0) {
+      track = word[0];
+      int predictorTid = whoIs(PREDICTOR_NAME);
+      send(predictorTid, marklin::Msg{marklin::Msg::Action::InitTrack, {track}, 1});
+    } else {
+      showInvalidCommand(displayServerTid);
+      return;
+    }
   } else {
     showInvalidCommand(displayServerTid);
   }
@@ -122,6 +135,7 @@ void render(int displayServerTid, int ch) {
 void consoleReader() {
   int displayServerTid = whoIs(DISPLAY_SERVER_NAME);
   int marklinServerTid = whoIs(MARKLIN_SERVER_NAME);
+  int predictTid = whoIs(PREDICTOR_NAME);
 
   send(marklinServerTid, marklin::Msg::go());
 
@@ -147,7 +161,7 @@ void consoleReader() {
         clock::delay(20);  // make sure "q" is sent
         shutdown();
       }
-      handleCmd(cmd, displayServerTid, marklinServerTid);
+      handleCmd(cmd, displayServerTid, marklinServerTid, predictTid);
       cmdIdx = 0;
     } else if (ch > 0 && cmdIdx <= 30) {
       cmd[cmdIdx++] = ch;

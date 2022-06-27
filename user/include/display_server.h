@@ -7,7 +7,7 @@
 #define DISPLAY_SERVER_NAME "DISPLAY_SERVER"
 
 namespace view {
-enum Action { Input, Sensor, Switch, Time, InvalidCmd, Quit };
+enum Action { Input, Sensor, Switch, Time, InvalidCmd, Quit, Predict };
 
 struct Msg {
   Action action;
