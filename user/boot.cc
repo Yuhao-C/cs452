@@ -6,8 +6,9 @@
 #include "k1.h"
 #include "k3.h"
 #include "lib/timer.h"
+#include "marklin/routing.h"
+#include "marklin/world.h"
 #include "marklin_server.h"
-#include "marklin/predictor.h"
 #include "name_server.h"
 #include "perf_test.h"
 #include "rps.h"
@@ -40,7 +41,9 @@ void boot() {
 
   create(1, marklin::cmdServer);
 
-  create(1, marklin::runPredictor);
+  create(1, marklin::runWorld);
+
+  create(2, marklin::runRouting);
 
   create(2, view::displayServer);
   create(2, consoleReader);

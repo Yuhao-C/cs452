@@ -14,12 +14,12 @@ class HashTable {
     Entry *next;
   };
 
-  Entry nodes[cap];
   Entry *bucket[bucketSize];
 
-  int size = 0;
-
  public:
+  int size = 0;
+  Entry nodes[cap];
+
   HashTable() {
     for (int i = 0; i < bucketSize; ++i) {
       bucket[i] = nullptr;
@@ -50,7 +50,7 @@ class HashTable {
     }
   }
 
-  const V *get(K key) {
+  V *get(K key) {
     int b = hash(key) % bucketSize;
     Entry *cur = bucket[b];
     while (cur) {

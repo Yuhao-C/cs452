@@ -3,8 +3,8 @@
 #include "lib/io.h"
 #include "lib/queue.h"
 #include "lib/string.h"
+#include "marklin/world.h"
 #include "marklin_server.h"
-#include "marklin/predictor.h"
 #include "name_server.h"
 #include "uart_server.h"
 #include "user/message.h"
@@ -28,6 +28,20 @@ void readWord(char** cmdAddr, char* word) {
   *cmdAddr = cmd;
 }
 
+bool parseInt(const char* str, int& n) {
+  int sign{1}, base{0};
+  if (*str == '-') {
+    sign = -1;
+    ++str;
+  }
+  while ('0' <= *str && *str <= '9') {
+    base = 10 * base + (*str - '0');
+    ++str;
+  }
+  n = base * sign;
+  return *str == 0;
+}
+
 void showInvalidCommand(int displayServerTid) {
   view::Msg msg{view::Action::InvalidCmd, {1}};
   send(displayServerTid, msg);
@@ -38,86 +52,127 @@ void clearInvalidCommand(int displayServerTid) {
   send(displayServerTid, msg);
 }
 
-void handleCmd(char* cmd, int displayServerTid, int marklinServerTid, int predictTid) {
-  char word[32];
-  char a2iRes;
-  const char* temp_word;
+void handleCmd(char* cmd, int displayServerTid, int marklinServerTid,
+               int worldTid) {
+  if (cmd[0] == 0) {
+    showInvalidCommand(displayServerTid);
+    return;
+  }
+  char* cmds[10];
+  cmds[0] = cmd;
+  int cmdsLen = 1;
+  int i = 0;
+  while (cmd[i] != 0) {
+    if (cmd[i] == ' ') {
+      while (cmd[i] == ' ') {
+        cmd[i] = 0;
+        ++i;
+      }
+      if (cmd[i] != 0) {
+        cmds[cmdsLen] = cmd + i;
+        ++cmdsLen;
+      }
+    } else {
+      ++i;
+    }
+  }
 
-  readWord(&cmd, word);
-  if (String(word) == "tr") {
+  if (String{cmds[0]} == "tr") {
+    if (cmdsLen != 3) {
+      showInvalidCommand(displayServerTid);
+      return;
+    }
     int trainNum;
     int trainSpeed;
-    readWord(&cmd, word);
-    if (word[0] == 0) {
-      showInvalidCommand(displayServerTid);
-      return;
-    }
-    temp_word = word;
-    a2iRes = a2i('0', &temp_word, 10, &trainNum);
-    if (a2iRes != 0) {
-      showInvalidCommand(displayServerTid);
-      return;
-    }
-    readWord(&cmd, word);
-    if (word[0] == 0) {
-      showInvalidCommand(displayServerTid);
-      return;
-    }
-    temp_word = word;
-    a2iRes = a2i('0', &temp_word, 10, &trainSpeed);
-    if (a2iRes != 0 || cmd[0] != 0) {
+    if (!parseInt(cmds[1], trainNum) || !parseInt(cmds[2], trainSpeed)) {
       showInvalidCommand(displayServerTid);
       return;
     }
     clearInvalidCommand(displayServerTid);
-    send(marklinServerTid, marklin::Msg::tr(trainSpeed, trainNum));
-  } else if (String{word} == "rv") {
+    send(worldTid, marklin::Msg::tr(trainSpeed, trainNum));
+  } else if (String{cmds[0]} == "rv") {
+    if (cmdsLen != 2) {
+      showInvalidCommand(displayServerTid);
+      return;
+    }
     int trainNum;
-    readWord(&cmd, word);
-    if (word[0] == 0) {
-      showInvalidCommand(displayServerTid);
-      return;
-    }
-    temp_word = word;
-    a2iRes = a2i('0', &temp_word, 10, &trainNum);
-    if (a2iRes != 0 || cmd[0] != 0) {
+    if (!parseInt(cmds[1], trainNum)) {
       showInvalidCommand(displayServerTid);
       return;
     }
     clearInvalidCommand(displayServerTid);
-    send(marklinServerTid, marklin::Msg::rv(trainNum));
-  } else if (String{word} == "sw") {
+    send(worldTid, marklin::Msg::rv(trainNum));
+  } else if (String{cmds[0]} == "sw") {
+    if (cmdsLen != 3) {
+      showInvalidCommand(displayServerTid);
+      return;
+    }
     int switchNum;
     char switchDirection;
-    readWord(&cmd, word);
-    if (word[0] == 0) {
+    if (!parseInt(cmds[1], switchNum)) {
       showInvalidCommand(displayServerTid);
       return;
     }
-    temp_word = word;
-    a2iRes = a2i('0', &temp_word, 10, &switchNum);
-    if (a2iRes != 0) {
+    if (String{cmds[2]} == "S" || String{cmds[2]} == "C") {
+      switchDirection = cmds[2][0];
+      clearInvalidCommand(displayServerTid);
+      send(worldTid, marklin::Msg::sw(switchDirection, switchNum));
+    } else {
       showInvalidCommand(displayServerTid);
       return;
     }
-    readWord(&cmd, word);
-    if ((word[0] != 'S' && word[0] != 'C') || word[1] != 0 || cmd[0] != 0) {
-      showInvalidCommand(displayServerTid);
-      return;
-    }
-    switchDirection = word[0];
-    clearInvalidCommand(displayServerTid);
-    send(marklinServerTid, marklin::Msg::sw(switchDirection, switchNum));
-    send(displayServerTid,
-         view::Msg{view::Action::Switch, {switchDirection, switchNum}});
-    send(predictTid, marklin::Msg::sw(switchDirection, switchNum));
-  } else if (String{word} == "track") {
+  } else if (String{cmds[0]} == "track") {
     char track;
-    readWord(&cmd, word);
-    if ((word[0] == 'A' || word[0] == 'B') && word[1] == 0) {
-      track = word[0];
-      int predictorTid = whoIs(PREDICTOR_NAME);
-      send(predictorTid, marklin::Msg{marklin::Msg::Action::InitTrack, {track}, 1});
+    if (cmdsLen != 2) {
+      showInvalidCommand(displayServerTid);
+      return;
+    }
+    if (String{cmds[1]} == "A" || String{cmds[1]} == "B") {
+      track = cmds[1][0];
+      clearInvalidCommand(displayServerTid);
+      send(worldTid, marklin::Msg{marklin::Msg::Action::InitTrack, {track}, 1});
+    } else {
+      showInvalidCommand(displayServerTid);
+      return;
+    }
+  } else if (String{cmds[0]} == "loc") {
+    if (cmdsLen != 4) {
+      showInvalidCommand(displayServerTid);
+      return;
+    }
+    int trainNum;
+    int nodeIdx;
+    if (parseInt(cmds[1], trainNum) && parseInt(cmds[2], nodeIdx) &&
+        (cmds[3][0] == 'f' || cmds[3][0] == 'b')) {
+      char direction = cmds[3][0];
+      clearInvalidCommand(displayServerTid);
+      send(worldTid, marklin::Msg{marklin::Msg::Action::SetTrainLoc,
+                                  {trainNum, nodeIdx, 0, direction},
+                                  4});
+    } else {
+      showInvalidCommand(displayServerTid);
+      return;
+    }
+  } else if (String{cmds[0]} == "route") {
+    if (cmdsLen != 5) {
+      showInvalidCommand(displayServerTid);
+      return;
+    }
+    int trainNum;
+    int destIdx;
+    int destOffset;
+    char speed;
+    if (!parseInt(cmds[1], trainNum) || !parseInt(cmds[2], destIdx) ||
+        !parseInt(cmds[3], destOffset)) {
+      showInvalidCommand(displayServerTid);
+      return;
+    }
+    if (String{cmds[4]} == "h" || String{cmds[4]} == "l") {
+      speed = cmds[4][0];
+      clearInvalidCommand(displayServerTid);
+      send(worldTid, marklin::Msg{marklin::Msg::Action::SetDestination,
+                                  {trainNum, destIdx, destOffset, speed},
+                                  4});
     } else {
       showInvalidCommand(displayServerTid);
       return;
@@ -135,7 +190,7 @@ void render(int displayServerTid, int ch) {
 void consoleReader() {
   int displayServerTid = whoIs(DISPLAY_SERVER_NAME);
   int marklinServerTid = whoIs(MARKLIN_SERVER_NAME);
-  int predictTid = whoIs(PREDICTOR_NAME);
+  int worldTid = whoIs(WORLD_NAME);
 
   send(marklinServerTid, marklin::Msg::go());
 
@@ -161,7 +216,7 @@ void consoleReader() {
         clock::delay(20);  // make sure "q" is sent
         shutdown();
       }
-      handleCmd(cmd, displayServerTid, marklinServerTid, predictTid);
+      handleCmd(cmd, displayServerTid, marklinServerTid, worldTid);
       cmdIdx = 0;
     } else if (ch > 0 && cmdIdx <= 30) {
       cmd[cmdIdx++] = ch;

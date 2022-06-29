@@ -156,18 +156,23 @@ void renderTime(Cursor &cursor, int *data) {
 }
 
 void renderPredict(Cursor &cursor, int *data) {
-  int nextSensorNum = data[0];
-  int nextSensorTick = data[1];
-  int isLastPredictValid = data[2];
+  int trainId = data[0];
+  const char *nextSensorName = (const char *)data[1];
+  int nextSensorTick = data[2];
   int timeDiff = data[3];
   int distDiff = data[4];
-  char sensorGroup;
-  int sensorNum;
-  marklin::Sensor::getSensorName(nextSensorNum, sensorGroup, sensorNum);
+  int avgVelocity = data[5];
+
+  int nstMin, nstSec, nstMs;
+  parseTime(nextSensorTick, nstMin, nstSec, nstMs);
 
   Cursor::hideCursor();
   cursor.setC(1);
-  printf(COM2, "next %c%02d", sensorGroup, sensorNum);
+  printf(COM2,
+         "train %2d (%4d mm/s) next %3s at %02d:%02d.%d    "
+         "last prediction diff %4d ms, %4d mm",
+         trainId, avgVelocity / 1000, nextSensorName, nstMin, nstSec, nstMs,
+         timeDiff * 10, distDiff);
   cursor.deleteLine();
 }
 
@@ -178,7 +183,7 @@ void displayServer() {
   int senderTid = -1;
 
   Cursor timeCursor{1, 1};
-  
+
   Cursor predictCursor{3, 1};
 
   Cursor switchCursor{5, 13};

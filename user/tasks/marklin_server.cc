@@ -5,7 +5,7 @@
 #include "lib/io.h"
 #include "lib/math.h"
 #include "lib/queue.h"
-#include "marklin/predictor.h"
+#include "marklin/world.h"
 #include "name_server.h"
 #include "user/message.h"
 #include "user/task.h"
@@ -84,7 +84,7 @@ void querySensors() {
   bool firstRead = true;
   int marklinServerTid = whoIs(MARKLIN_SERVER_NAME);
   int displayServerTid = whoIs(DISPLAY_SERVER_NAME);
-  int predictorTid = whoIs(PREDICTOR_NAME);
+  int worldTid = whoIs(WORLD_NAME);
   while (true) {
     send(marklinServerTid, Msg::querySensors());
     bool updated = false;
@@ -103,10 +103,10 @@ void querySensors() {
           sensor.mrvIdx = (sensor.mrvIdx + 1) % MRV_CAP;
           sensor.mrvSize =
               sensor.mrvSize >= MRV_CAP ? MRV_CAP : sensor.mrvSize + 1;
-          while (predictorTid < 0) {
-            predictorTid = whoIs(PREDICTOR_NAME);
+          while (worldTid < 0) {
+            worldTid = whoIs(WORLD_NAME);
           }
-          send(predictorTid,
+          send(worldTid,
                Msg{Msg::Action::SensorTriggered, {bitIdx, currTime}, 2});
         }
         ++bitIdx;
@@ -149,18 +149,6 @@ void cmdServer() {
   bool cmdCanSendSw = false;
   bool isSolenoidOn = false;
 
-  Train trains[81];
-
-  int availableTrains[] = {1, 24, 58, 74, 78, 79};
-
-  for (int id : availableTrains) {
-    trains[id].id = id;
-    trains[id].speed = -1;
-    trains[id].isReversing = false;
-    trains[id].reverseTid = create(2, reverseTask);
-    send(trains[id].reverseTid, id);
-  }
-
   while (true) {
     receive(senderTid, msg);
 
@@ -173,51 +161,20 @@ void cmdServer() {
         cmdCanSendSw = true;
         break;
       }
-      case Msg::Action::ReverseReady: {
-        Train &train = trains[msg.getTrainId()];
-        train.isReversing = false;
-        break;
-      }
       case Msg::Action::Cmd: {
         cmdQueue.enqueue(msg);
         reply(senderTid, 0);
         break;
       }
       case Msg::Action::TrainCmd: {
-        Train &train = trains[msg.getTrainId()];
-        int cmd = msg.data[0];
-        if (0 <= cmd && cmd <= 31) {
-          if (!train.isReversing || senderTid == train.reverseTid) {
-            cmdQueue.enqueue(msg);
-            if (cmd != 15 && cmd != 31) {
-              // not a reverse command
-              train.speed = cmd;
-            }
-            reply(senderTid, 0);
-          } else {
-            reply(senderTid, -1);
-          }
-        } else {
-          cmdQueue.enqueue(msg);
-          reply(senderTid, 0);
-        }
+        cmdQueue.enqueue(msg);
+        reply(senderTid, 0);
         break;
       }
       case Msg::Action::SwitchCmd:
         swQueue.enqueue(msg);
         reply(senderTid, 0);
         break;
-      case Msg::Action::ReverseCmd: {
-        Train &train = trains[msg.getTrainId()];
-        if (!train.isReversing) {
-          train.isReversing = true;
-          reply(train.reverseTid, train.speed);
-          reply(senderTid, 0);
-        } else {
-          reply(senderTid, -1);
-        }
-        break;
-      }
     }
 
     if (cmdCanSend) {

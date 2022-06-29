@@ -1,3 +1,6 @@
+#ifndef TRACK_TRACK_NODE_H_
+#define TRACK_TRACK_NODE_H_
+
 typedef enum {
   NODE_NONE,
   NODE_SENSOR,
@@ -18,14 +21,16 @@ typedef struct track_edge track_edge;
 struct track_edge {
   track_edge *reverse;
   track_node *src, *dest;
-  int dist;             /* in millimetres */
+  int dist; /* in millimetres */
 };
 
 struct track_node {
   const char *name;
   node_type type;
-  int num;              /* sensor or switch number */
-  track_node *reverse;  /* same location, but opposite direction */
+  int num;             /* sensor or switch number */
+  track_node *reverse; /* same location, but opposite direction */
   track_edge edge[2];
-  int status;           /* for NODE_BRANCH: DIR_STRAIGHT or DIR_CURVED */
+  int status; /* for NODE_BRANCH: DIR_STRAIGHT or DIR_CURVED */
 };
+
+#endif  // TRACK_TRACK_NODE_H_
