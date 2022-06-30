@@ -201,6 +201,7 @@ void displayServer() {
   while (true) {
     struct Msg msg;
     receive(senderTid, msg);
+    reply(senderTid);
     switch (msg.action) {
       case Input:
         renderInput(inputCursor, msg.data[0]);
@@ -229,7 +230,6 @@ void displayServer() {
     }
     inputCursor.commit();
     Cursor::showCursor();
-    reply(senderTid);
     if (quit) {
       break;
     }

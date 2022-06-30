@@ -171,7 +171,7 @@ void handleCmd(char* cmd, int displayServerTid, int marklinServerTid,
       speed = cmds[4][0];
       clearInvalidCommand(displayServerTid);
       send(worldTid, marklin::Msg{marklin::Msg::Action::SetDestination,
-                                  {trainNum, destIdx, destOffset, speed},
+                                  {trainNum, destIdx, destOffset * 1000, speed},
                                   4});
     } else {
       showInvalidCommand(displayServerTid);

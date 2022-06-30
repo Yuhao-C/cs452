@@ -5,6 +5,7 @@
 #include "marklin_server.h"
 #include "name_server.h"
 #include "user/message.h"
+
 namespace marklin {
 
 void runRouting() {
@@ -64,6 +65,8 @@ void Routing::onDestinationSet(int* data) {
   int stopDist = data[3];
   int velocity = data[4];
   track_node* srcNode = &track[data[5]];
+  track_node* nextSensor = &track[data[6]];
+  int speedLevel = data[7];
 
   int stopOffset = destOffset - stopDist;
   track_node* curNode = destNode;
@@ -82,6 +85,9 @@ void Routing::onDestinationSet(int* data) {
     int remainOffset = stopOffset;
     while (true) {
       int edgeIdx = 0;
+      if (curNode->type == node_type::NODE_ENTER) {
+        return;
+      }
       if (curNode->type == node_type::NODE_MERGE) {
         int edge0Dist =
             route(srcNode, curNode->reverse->edge[0].dest->reverse, true);
@@ -100,6 +106,9 @@ void Routing::onDestinationSet(int* data) {
   // find last sensor
   while (curNode->type != node_type::NODE_SENSOR) {
     int edgeIdx = 0;
+    if (curNode->type == node_type::NODE_ENTER) {
+      return;
+    }
     if (curNode->type == node_type::NODE_MERGE) {
       int edge0Dist =
           route(srcNode, curNode->reverse->edge[0].dest->reverse, true);
@@ -113,10 +122,13 @@ void Routing::onDestinationSet(int* data) {
   stopSensorDelay = stopSensorDelayDist * 100 / velocity;
   stopSensor = curNode;
 
-  // find last sensor that is 100 cm away
+  // find last sensor that is 120 cm away
   int slowDownDist = 0;
   do {
     int edgeIdx = 0;
+    if (curNode->type == node_type::NODE_ENTER) {
+      return;
+    }
     if (curNode->type == node_type::NODE_MERGE) {
       int edge0Dist =
           route(srcNode, curNode->reverse->edge[0].dest->reverse, true);
@@ -126,16 +138,22 @@ void Routing::onDestinationSet(int* data) {
     }
     slowDownDist += curNode->reverse->edge[edgeIdx].dist;
     curNode = curNode->reverse->edge[edgeIdx].dest->reverse;
-  } while (curNode->type != node_type::NODE_SENSOR || slowDownDist < 1000000);
+  } while (curNode->type != node_type::NODE_SENSOR || slowDownDist < 1200000);
   slowDownSensor = curNode;
 
-  if (srcNode == slowDownSensor) {
-    route(slowDownSensor, destNode, false);
-    send(worldTid, Msg::tr(23, trainId));
-    routeStatus = 2;
+  if (srcNode == slowDownSensor || nextSensor == slowDownSensor) {
+    int dist = route(srcNode, destNode, false);
+    if (dist < __INT_MAX__) {
+      send(worldTid, Msg::tr(speedLevel, trainId));
+      send(worldTid, Msg::tr(23, trainId));
+      routeStatus = 2;
+    }
   } else {
-    route(srcNode, slowDownSensor, false);
-    routeStatus = 1;
+    int dist = route(srcNode, slowDownSensor, false);
+    if (dist < __INT_MAX__) {
+      send(worldTid, Msg::tr(speedLevel, trainId));
+      routeStatus = 1;
+    }
   }
 }
 

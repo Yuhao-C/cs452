@@ -63,16 +63,16 @@ void World::run() {
 
     switch (msg.action) {
       case Msg::Action::InitTrack:
-        init((TrackSet)msg.data[0]);
         reply(senderTid, 0);
+        init((TrackSet)msg.data[0]);
         break;
       case Msg::Action::SetTrainLoc:
-        onSetTrainLoc(msg);
         reply(senderTid, 0);
+        onSetTrainLoc(msg);
         break;
       case Msg::Action::SwitchCmd:
+        reply(senderTid, 0);
         onSwitch(msg);
-        reply(senderTid, -1);
         break;
       case Msg::Action::SensorTriggered:
         reply(senderTid, 0);
@@ -83,10 +83,12 @@ void World::run() {
         onSetDestination(msg);
         break;
       case Msg::Action::TrainCmd:
-        reply(senderTid, onSetTrainSpeed(senderTid, msg));
+        reply(senderTid, 0);
+        onSetTrainSpeed(senderTid, msg);
         break;
       case Msg::Action::ReverseCmd:
-        reply(senderTid, onReverseTrain(msg));
+        reply(senderTid, 0);
+        onReverseTrain(msg);
         break;
     }
   }
@@ -104,7 +106,10 @@ void World::init(TrackSet trackSet) {
   displayServerTid = whoIs(DISPLAY_SERVER_NAME);
 
   // initialize switches
-  char switchInit[] = "SSSSCSSSSSCSSSSSSCSCCS";
+  char switchInitA[] = "SSSSCSSSSSCSSSSSSCSCSC";
+  char switchInitB[] = "SSSSCSSSSSCSSSSSSCSCCS";
+  char *switchInit = trackSet == TrackSet::TrackA ? switchInitA : switchInitB;
+
   for (int i = 0; i < 22; ++i) {
     track[80 + 2 * i].status = switchInit[i] == 'S' ? DIR_STRAIGHT : DIR_CURVED;
     int switchDirection = switchInit[i];
@@ -203,17 +208,17 @@ void World::onSensorTrigger(const Msg &msg) {
 void World::onSetDestination(const Msg &msg) {
   Train *train = getTrain(msg.data[0]);
   // send to routing
-  send(routingServerTid,
-       Msg{Msg::Action::SetDestination,
-           {msg.data[0], msg.data[1], msg.data[2] - train->direction,
-            train->stopDist[Train::SpeedLevel::SevenDec],
-            train->velocity[Train::SpeedLevel::SevenDec],
-            train->nextSensor->num}});
-  // start the train
+  int dist;
   int speedLevel = msg.data[3];
-  train->setSpeedLevel(speedLevel == 'h' ? Train::SpeedLevel::FourteenInc
-                                         : Train::SpeedLevel::TenInc);
-  send(marklinServerTid, Msg::tr(speedLevel == 'h' ? 30 : 26, train->id));
+  send(
+      routingServerTid,
+      Msg{Msg::Action::SetDestination,
+          {msg.data[0], msg.data[1], msg.data[2] - train->direction,
+           train->stopDist[Train::SpeedLevel::SevenDec],
+           train->velocity[Train::SpeedLevel::SevenDec], train->nextSensor->num,
+           findNextSensor(train->nextSensor, dist)->num,
+           speedLevel == 'h' ? 30 : 26},
+          8});
 }
 
 int World::onSetTrainSpeed(int senderTid, const Msg &msg) {

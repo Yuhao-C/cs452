@@ -789,7 +789,7 @@ int init_tracka(track_node *track) {
   track[84].edge[DIR_CURVED].reverse = &track[83].edge[DIR_AHEAD];
   track[84].edge[DIR_CURVED].src = &track[84];
   track[84].edge[DIR_CURVED].dest = &track[82];
-  track[84].edge[DIR_CURVED].dist = 185000;
+  track[84].edge[DIR_CURVED].dist = BROKEN_DIST;  // 185000;
   track[85].name = "MR3";
   track[85].status = 0;
   track[85].type = NODE_MERGE;
@@ -1185,7 +1185,7 @@ int init_tracka(track_node *track) {
   track[120].edge[DIR_CURVED].reverse = &track[48].edge[DIR_AHEAD];
   track[120].edge[DIR_CURVED].src = &track[120];
   track[120].edge[DIR_CURVED].dest = &track[49];
-  track[120].edge[DIR_CURVED].dist = 246000;
+  track[120].edge[DIR_CURVED].dist = BROKEN_DIST;  // 246000;
   track[121].name = "MR155";
   track[121].status = 0;
   track[121].type = NODE_MERGE;
@@ -1203,7 +1203,7 @@ int init_tracka(track_node *track) {
   track[122].edge[DIR_STRAIGHT].reverse = &track[121].edge[DIR_AHEAD];
   track[122].edge[DIR_STRAIGHT].src = &track[122];
   track[122].edge[DIR_STRAIGHT].dest = &track[120];
-  track[122].edge[DIR_STRAIGHT].dist = 0000;
+  track[122].edge[DIR_STRAIGHT].dist = BROKEN_DIST;  // 0000;
   track[122].edge[DIR_CURVED].reverse = &track[64].edge[DIR_AHEAD];
   track[122].edge[DIR_CURVED].src = &track[122];
   track[122].edge[DIR_CURVED].dest = &track[65];
@@ -2140,7 +2140,7 @@ int init_trackb(track_node *track) {
   track[86].edge[DIR_CURVED].reverse = &track[12].edge[DIR_AHEAD];
   track[86].edge[DIR_CURVED].src = &track[86];
   track[86].edge[DIR_CURVED].dest = &track[13];
-  track[86].edge[DIR_CURVED].dist = 236000;
+  track[86].edge[DIR_CURVED].dist = BROKEN_DIST;  // 236000;
   track[87].name = "MR4";
   track[87].status = 0;
   track[87].type = NODE_MERGE;

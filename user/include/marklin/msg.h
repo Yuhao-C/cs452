@@ -16,10 +16,10 @@ struct Msg {
     SetTrainLoc,          // data = {trainId, nodeIndex, offset, direction}
     SensorTriggered,      // data = {sensorNum, tick[, trainId, predictNext]}
     SetDestination,       // data = {trainId, dest_node, offset[, speedLevel |
-                     // stopDist, velocity, src_node]}
+                          // stopDist, velocity, src_node, next_sensor]}
   };
   Action action;
-  int data[6];
+  int data[8];
   int len;
 
   int getTrainId() const;
