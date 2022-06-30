@@ -41,6 +41,17 @@
     - [Train 74](#train-74)
     - [Train 78](#train-78)
     - [Train 79](#train-79)
+  - [Train Control Application](#train-control-application)
+    - [Usage](#usage)
+    - [Structure](#structure)
+    - [Routing](#routing)
+      - [Speed](#speed)
+      - [Algorithm](#algorithm)
+    - [Sensor Prediction](#sensor-prediction)
+    - [Speed Estimation](#speed-estimation)
+    - [Fault Tolerance](#fault-tolerance)
+      - [Broken Branch](#broken-branch)
+      - [Broken Sensor](#broken-sensor)
 
 ## Group Member
 
@@ -566,3 +577,84 @@ For stopping distance measurement, we set the train to a certain speed level, th
 | 12    | 531.84           | 563.99           | 777.00                 | 899.67                 |
 | 13    | 604.17           | 651.42           | 1002.33                | 1141.33                |
 | 14    | 695.11           | n/a              | 1275.67                | n/a                    |
+
+## Train Control Application
+
+### Usage
+
+- `track <track set {A, B}>` - initialize the track; before this command is issued, other train control command won't work
+- `tr <train number> <train speed>` – set any train in motion at the desired speed (0 for stop)
+- `rv <train number>` – reverse the direction of the train
+- `sw <switch number> <switch direction>` - set the given switch to straight (S) or curved \(C\)
+- `loc <train number> <next sensor num> <direction {f, b}` - initialize the location and direction of the train
+- `route <train number> <dest node index> <offset (mm)> <speed level {l, h}>` - route the train to `dest node` + `offset`
+- `q` - halt the system and return to RedBoot
+
+### Structure
+
+- `marklin::World`
+  - maintains trains and tracks status
+  - on receiving user commands updates status and issue Marklin commands to `marklin::cmdServer`
+  - on receiving sensor trigger updates status
+  - on status change notifies `displayServer`
+- `consoleReader` - reads and parse user input and send them to `marklin::World` for processing
+- `marklin::cmdServer` - handles the actual sending of Marklin commands
+- `marklin::querySensor` - continuously query sensor and send updates to `marklin::World`
+- `displayServer` - receives status update from `marklin::World` and update user interface accordingly
+
+### Routing
+
+#### Speed
+
+We support 2 speed levels `l, h`, for routing.
+
+- `l` - speed level `10 inc`
+- `h` - speed level `14 inc`
+
+For stopping, we use speed level `7 dec`. So trains will reduce their speed from `l` or `h` to `7 dec` before stopping.
+
+#### Algorithm
+
+We use `Dijkstra's shortest path` algorithm for routing.
+
+The routing happens in 2 stages.
+
+- Stage 1:
+
+  - find sensor for slow down - `slowDownSensor`
+  - find sensor before stop - `stopSensor`
+  - find `stopDelay` after `stopSensor` for sending stop command
+  - find route from `start` to `slowDownSensor`, and modify switches accordingly.
+
+  From `dest` + `offset`, we first go back `stop dist` to find `stopLocation`. Then find the last sensor before that, call it `stopSensor`. Then based on the distance between `stopSensor` and `stopLocation`, we can calculate `stopDelay`. Then from `stopSensor`, we go back additional `100cm`, and find the last sensor before that, call it `slowDownSensor`.
+
+  When going back from dest, if there are branches, we choose the branch that will result in shorter distance.
+
+- Stage 2
+  - find route from `slowDownSensor` to `destination`, and modify switches accordingly.
+  - When train triggers `slowDownSensor`, reduce its speed to `7 dec`.
+  - When train triggers `stopSensor`, we set a `timer` of period `stopDelay`. After the delay, we set the train speed to zero.
+
+### Sensor Prediction
+
+Currently we can predict sensor when there is only one train running on the track.
+We use current switch status and the triggered sensor to find the next sensor, and use pre-calibrated velocity to predict the next trigger time.
+
+For sensor prediction to work, we must specify the start location of the train by using `loc` command and manually input the next sensor the train will trigger.
+
+### Speed Estimation
+
+On every sensor trigger we estimate the average velocity of the train in current section (between the currently triggered sensor and the last triggered sensor), using distance between sensors and the trigger time.
+Currently we only display the estimate and do not update the calibration data.
+
+### Fault Tolerance
+
+#### Broken Branch
+
+For broken branches we set the distance of the broken edge to a very large number, so that our routing algorithm will try to avoid them and find a shorter path. However, this won't work if the broken edge is the only path to the destination.
+
+Currently we have only recorded the broken branches for Track B.
+
+#### Broken Sensor
+
+If the triggered sensor is not the expected one, we try to search for next two expected sensor and match. Speed estimation still works because we will calculate the distance between the actual triggered sensor and the last triggered sensor. This can handle the case when at most two consecutive sensors are broken. If we still can't match a sensor, we consider it as an error and issue emergency stop.
