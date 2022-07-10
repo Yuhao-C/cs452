@@ -19,7 +19,7 @@ struct Msg {
                           // stopDist, velocity, src_node, next_sensor]}
   };
   Action action;
-  int data[8];
+  int data[11];
   int len;
 
   int getTrainId() const;

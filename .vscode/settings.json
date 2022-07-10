@@ -3,7 +3,8 @@
   "makefile.makeDirectory": ".",
   "files.associations": {
     "bwio.h": "c",
-    "ts7200.h": "c"
+    "ts7200.h": "c",
+    "unordered_map": "cpp"
   },
   "makefile.dryrunSwitches": [
     "--always-make",

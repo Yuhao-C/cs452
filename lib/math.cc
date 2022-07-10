@@ -11,3 +11,14 @@ int mod(int a, int b) {
   }
   return m;
 }
+
+int sqrt(int x) {
+  if (x < 2) {
+    return x;
+  }
+
+  int left = sqrt(x >> 2) << 1;
+  int right = left + 1;
+
+  return right * right > x ? left : right;
+}

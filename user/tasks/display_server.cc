@@ -84,11 +84,11 @@ void sensorInit(Cursor &sensorCursor) {
 }
 
 void renderInput(Cursor &cursor, char ch) {
-  if (ch == 8) {
+  if (ch == '\b') {
     // backspace
     cursor.setC(cursor.c - 1);
     cursor.deleteLine();
-  } else if (ch == 13) {
+  } else if (ch == '\r' || ch == '\n') {
     // enter
     cursor.setC(3);
     cursor.deleteLine();
@@ -178,9 +178,11 @@ void renderPredict(Cursor &cursor, int *data) {
 
 void displayServer() {
   registerAs(DISPLAY_SERVER_NAME);
-  putstr(COM2, "\033[2J");  // clear screen
 
   int senderTid = -1;
+
+#if ENABLE_DISPLAY
+  putstr(COM2, "\033[2J");  // clear screen
 
   Cursor timeCursor{1, 1};
 
@@ -196,12 +198,16 @@ void displayServer() {
   inputCursor.putstr("> ");
 
   Cursor invalidCmdCursor{23, 1};
+#endif
+
   bool quit = false;
 
   while (true) {
     struct Msg msg;
     receive(senderTid, msg);
     reply(senderTid);
+
+#if ENABLE_DISPLAY
     switch (msg.action) {
       case Input:
         renderInput(inputCursor, msg.data[0]);
@@ -230,6 +236,7 @@ void displayServer() {
     }
     inputCursor.commit();
     Cursor::showCursor();
+#endif
     if (quit) {
       break;
     }

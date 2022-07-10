@@ -9,6 +9,12 @@
 
 namespace marklin {
 
+struct PathInfo {
+  int idx;
+  int distance;
+  track_node* parent;
+};
+
 void runRouting();
 
 class Routing {
@@ -23,8 +29,11 @@ class Routing {
   track_node track[TRACK_MAX];
   TrackSet trackSet;
 
+  int trainStopSensor[80][2];
+
   void clearStatus();
-  int route(track_node* src, track_node* dest, bool mock);
+  int route(track_node* src, track_node* dest, track_node* (&path)[TRACK_MAX],
+            bool mock);
   // bool canGo(track_node* src, track_node* dst);
   void onDestinationSet(int* data);
 

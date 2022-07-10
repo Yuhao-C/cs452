@@ -5,6 +5,7 @@
 #include "marklin/routing.h"
 #include "marklin_server.h"
 #include "name_server.h"
+#include "train_data.h"
 #include "user/message.h"
 #include "user/task.h"
 
@@ -36,16 +37,8 @@ World::World()
       trackSize{0},
       marklinServerTid{-1},
       routingServerTid{-1},
-      displayServerTid{-1},
-      trains{Train{trainData[0][0], &trainData[0][1], &trainData[0][4]},
-             Train{trainData[1][0], &trainData[1][1], &trainData[1][4]},
-             Train{trainData[2][0], &trainData[2][1], &trainData[2][4]},
-             Train{trainData[3][0], &trainData[3][1], &trainData[3][4]},
-             Train{trainData[4][0], &trainData[4][1], &trainData[4][4]},
-             Train{trainData[5][0], &trainData[5][1], &trainData[5][4]}} {
-  // for (int i = 0; i < 6; ++i) {
-  //   trains[i] = {trainData[i][0], &trainData[i][1], &trainData[i][4]};
-  // }
+      displayServerTid{-1} {
+  initTrains(trains);
 }
 
 void World::run() {
@@ -133,6 +126,8 @@ void World::onSetTrainLoc(const Msg &msg) {
   int direction = msg.data[3];
 
   Train *t = getTrain(trainId);
+  t->locNodeIdx = nodeIdx;
+  t->locOffset = offset;
   t->nextSensor = &track[nodeIdx];
   t->nextSensorTick = 0;
   t->direction =
@@ -208,17 +203,26 @@ void World::onSensorTrigger(const Msg &msg) {
 void World::onSetDestination(const Msg &msg) {
   Train *train = getTrain(msg.data[0]);
   // send to routing
-  int dist;
-  int speedLevel = msg.data[3];
-  send(
-      routingServerTid,
-      Msg{Msg::Action::SetDestination,
-          {msg.data[0], msg.data[1], msg.data[2] - train->direction,
-           train->stopDist[Train::SpeedLevel::SevenDec],
-           train->velocity[Train::SpeedLevel::SevenDec], train->nextSensor->num,
-           findNextSensor(train->nextSensor, dist)->num,
-           speedLevel == 'h' ? 30 : 26},
-          8});
+  // clang-format off
+  Msg msgSend{
+    Msg::Action::SetDestination,
+    {
+      train->id,
+      train->accelSlow,
+      train->accelDelay,
+      train->accelDist,
+      train->decelSlow,
+      train->stopDist,
+      train->velocity,
+      train->locNodeIdx,
+      train->locOffset - train->direction,
+      msg.data[1],
+      msg.data[2] - train->direction
+    },
+    11
+  };
+  // clang-format on
+  send(routingServerTid, msgSend);
 }
 
 int World::onSetTrainSpeed(int senderTid, const Msg &msg) {
@@ -242,6 +246,7 @@ int World::onSetTrainSpeed(int senderTid, const Msg &msg) {
       }
 
       train->setSpeedLevel(Train::getSpeedLevel(cmd));
+      // println(COM2, "%d", clock::time());
       send(marklinServerTid, msg);
       return 0;
     }
@@ -269,15 +274,23 @@ Train *World::predictTrainBySensor(int sensorNum, int &offDist) {
   track_node *expected[6];
   int offDistances[6];
 
+  int predicted = -1;
   for (int i = 0; i < 6; ++i) {
     Train *t = &trains[i];
     if (t->nextSensor && t->nextSensor->type == NODE_SENSOR &&
         t->nextSensor->num == sensorNum) {
-      offDist = 0;
-      return t;
+      if (predicted < 0 ||
+          t->nextSensorTick < trains[predicted].nextSensorTick) {
+        predicted = i;
+      }
     }
     expected[i] = t->nextSensor;
     offDistances[i] = 0;
+  }
+
+  if (predicted >= 0) {
+    offDist = 0;
+    return &trains[predicted];
   }
 
   for (int round = 0; round < searchRound; ++round) {
@@ -290,9 +303,17 @@ Train *World::predictTrainBySensor(int sensorNum, int &offDist) {
             expected[i]->num == sensorNum) {
           offDist = offDistances[i];
           return &trains[i];
+          // TODO: check train expected time/distance to find out which train
+          // when one sensor broken
+          // TODO: handle case when one switch broken
         }
       }
     }
+  }
+
+  if (predicted >= 0) {
+    offDist = offDistances[predicted];
+    return &trains[predicted];
   }
 
   return nullptr;

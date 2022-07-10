@@ -14,7 +14,7 @@ AS = $(XBINDIR)/arm-none-eabi-as
 LD = $(XBINDIR)/arm-none-eabi-ld
 
 # C preprocessor flags
-CPPFLAGS = -I./include -I./user/include -I./track/include -MMD -MP
+CPPFLAGS = -I./include -I./user/include -I./track/include -I./calibration/include -MMD -MP
 
 # C++ compiler flags
 # -g: include debug information for gdb
@@ -25,7 +25,7 @@ CPPFLAGS = -I./include -I./user/include -I./track/include -MMD -MP
 # -msoft-float: no FP co-processor
 CXXFLAGS = -g -fPIC -Wall -mcpu=arm920t -msoft-float -fno-rtti -fno-exceptions -O3
 
-CXXFLAGS += -DENABLE_OPT=1 -DENABLE_CACHE=1 -DSENDER_FIRST=0
+CXXFLAGS += -DENABLE_DISPLAY=0 -DENABLE_OPT=1 -DENABLE_CACHE=1 -DSENDER_FIRST=0
 
 # c: create archive, if necessary
 # r: insert with replacement
@@ -40,10 +40,13 @@ LDFLAGS = -static -e main -nmagic -T linker.ld -L ./lib -L $(XLIBDIR2) -L $(XLIB
 
 LDLIBS = -lstdc++ -lc -lgcc
 
-CXXSRC := $(shell find . -name '*.cc')
+CXXSRC := $(shell find . -path './test' -prune -o -name '*.cc' -print)
 ASMSRC := $(shell find . -name '*.S')
 
 all: kern/kmain.elf
+
+calibration/include/train_data.h: ./calibration/data/trains.json
+	./calibration/calib_gen.py $^ $@
 
 kern/kmain.elf: $(CXXSRC:%.cc=%.o) $(ASMSRC:%.S=%.o)
 	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)

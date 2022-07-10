@@ -136,47 +136,41 @@ void handleCmd(char* cmd, int displayServerTid, int marklinServerTid,
       return;
     }
   } else if (String{cmds[0]} == "loc") {
-    if (cmdsLen != 4) {
+    if (cmdsLen != 5) {
       showInvalidCommand(displayServerTid);
       return;
     }
     int trainNum;
     int nodeIdx;
+    int offset;
     if (parseInt(cmds[1], trainNum) && parseInt(cmds[2], nodeIdx) &&
-        (cmds[3][0] == 'f' || cmds[3][0] == 'b')) {
-      char direction = cmds[3][0];
+        parseInt(cmds[3], offset) && (cmds[4][0] == 'f' || cmds[4][0] == 'b')) {
+      char direction = cmds[4][0];
       clearInvalidCommand(displayServerTid);
       send(worldTid, marklin::Msg{marklin::Msg::Action::SetTrainLoc,
-                                  {trainNum, nodeIdx, 0, direction},
+                                  {trainNum, nodeIdx, offset * 1000, direction},
                                   4});
     } else {
       showInvalidCommand(displayServerTid);
       return;
     }
   } else if (String{cmds[0]} == "route") {
-    if (cmdsLen != 5) {
+    if (cmdsLen != 4) {
       showInvalidCommand(displayServerTid);
       return;
     }
     int trainNum;
     int destIdx;
     int destOffset;
-    char speed;
     if (!parseInt(cmds[1], trainNum) || !parseInt(cmds[2], destIdx) ||
         !parseInt(cmds[3], destOffset)) {
       showInvalidCommand(displayServerTid);
       return;
     }
-    if (String{cmds[4]} == "h" || String{cmds[4]} == "l") {
-      speed = cmds[4][0];
-      clearInvalidCommand(displayServerTid);
-      send(worldTid, marklin::Msg{marklin::Msg::Action::SetDestination,
-                                  {trainNum, destIdx, destOffset * 1000, speed},
-                                  4});
-    } else {
-      showInvalidCommand(displayServerTid);
-      return;
-    }
+    clearInvalidCommand(displayServerTid);
+    send(worldTid, marklin::Msg{marklin::Msg::Action::SetDestination,
+                                {trainNum, destIdx, destOffset * 1000, 10},
+                                4});
   } else {
     showInvalidCommand(displayServerTid);
   }
@@ -200,13 +194,13 @@ void consoleReader() {
   while (true) {
     int ch = getc(COM2);
     assert(ch >= 0);
-    if (ch == 8) {
+    if (ch == '\b') {
       // backspace
       if (cmdIdx > 0) {
         cmd[--cmdIdx] = 0;
         render(displayServerTid, ch);
       }
-    } else if (ch == 13) {
+    } else if (ch == '\r' || ch == '\n') {
       render(displayServerTid, ch);
       cmd[cmdIdx++] = 0;
       // enter
