@@ -160,7 +160,7 @@ void World::onSetTrainLoc(const Msg &msg) {
   // clang-format off
   send(displayServerTid, view::Msg{
     view::Action::Train, {
-      t - trains, 0,
+      t - trains, view::TrainStatus::Stationary,
       t->locNodeIdx, t->locOffset,
       t->viaNodeIdx, t->viaOffset,
       t->destNodeIdx, t->destOffset,
@@ -267,7 +267,7 @@ void World::onSensorTrigger(const Msg &msg) {
   // clang-format off
   send(displayServerTid, view::Msg{
     view::Action::Train, {
-      t - trains, 2,
+      t - trains, view::TrainStatus::PassedSensor,
       sensorNum, 0,
       t->viaNodeIdx, t->viaOffset,
       t->destNodeIdx, t->destOffset,
@@ -351,15 +351,26 @@ int World::onSetTrainSpeed(int senderTid, const Msg &msg) {
 
 int World::onReverseTrain(const Msg &msg) {
   Train *train = getTrain(msg.data[1]);
-  if (train->isReversing) {
-    return -1;
-  } else {
-    train->isReversing = true;
-    train->reverseTid = create(2, reverseWorker);
-    send(train->reverseTid, Msg{Msg::Action::ReverseCmd,
-                                {train->getSpeedLevelInt(), msg.data[1]}});
-    return 0;
+  if (train->getSpeedLevel() == Train::SpeedLevel::Zero) {
+    train->reverseDirection();
+    train->nextSensor =
+            findNextSensor(train->nextSensor->reverse, train->nextSensorDist);
+    train->locNodeIdx = track[train->locNodeIdx].reverse - track;
+    train->locOffset = -(train->locOffset - TRAIN_LENGTH);
+    send(marklinServerTid, Msg::tr(31, train->id));
+    // clang-format off
+    send(displayServerTid, view::Msg{
+      view::Action::Train, {
+        train - trains,
+        train->isBlocked ? view::TrainStatus::Blocked : view::TrainStatus::Stationary,
+        train->locNodeIdx, train->locOffset,
+        train->viaNodeIdx, train->viaOffset,
+        train->destNodeIdx, train->destOffset,
+      }
+    });
+    // clang-format on
   }
+  return 0;
 }
 
 void World::onTrainDepart(const Msg &msg) {
@@ -369,7 +380,7 @@ void World::onTrainDepart(const Msg &msg) {
   // clang-format off
   send(displayServerTid, view::Msg{
     view::Action::Train, {
-      train - trains, 1,
+      train - trains, view::TrainStatus::Departed,
       train->locNodeIdx, train->locOffset,
       train->viaNodeIdx, train->viaOffset,
       train->destNodeIdx, train->destOffset,

@@ -62,23 +62,6 @@ void swNotifier() {
   }
 }
 
-void reverseTask() {
-  int serverTid, train, speed;
-
-  receive(serverTid, train);
-  reply(serverTid);
-
-  Msg rvReadyMsg{Msg::Action::ReverseReady, {0, train}, 1};
-
-  while (true) {
-    send(serverTid, rvReadyMsg, speed);
-    send(serverTid, Msg::tr(speed & 16, train));  // stop train
-    clock::delay(400);
-    send(serverTid, Msg::tr(speed | 15, train));  // reverse train
-    send(serverTid, Msg::tr(speed, train));       // start train
-  }
-}
-
 void querySensors() {
   Sensor sensor{0, 0, {0}, {0}, {{0, 0}}};
   bool firstRead = true;

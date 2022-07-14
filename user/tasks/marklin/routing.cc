@@ -38,7 +38,7 @@ void awaitStop() {
     log("[routing]: reroute before stop train %d", trainId);
     send(worldTid, marklin::Msg{marklin::Msg::Action::Reroute, {trainId}, 1});
   } else {
-    send(worldTid, Msg::tr(0, trainId));
+    send(worldTid, Msg::tr(16, trainId));
     if (rerouteOnStop) {
       clock::delay(400);
       log("[routing]: reroute after stop train %d", trainId);
@@ -400,7 +400,7 @@ void Routing::handleReroute(int* data) {
     // stop as usual
     log("[reroute]: reroute train %d, dist: %d, realDist: %d, stop directly",
         trainId, dist, realDist);
-    handleDeparture(trainId, 0, 0, false, true);
+    handleDeparture(trainId, 16, 0, false, true);
   } else {
     reserveTrack(path, trainId, req);
     switchTurnout(path);

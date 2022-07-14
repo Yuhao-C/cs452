@@ -219,7 +219,12 @@ void renderTrain(Cursor &cursor, int *data, track_node *track) {
   cursor.setR(26 + trainIndex);
 
   // clang-format off
-  const char *statusStr[3] = {"           at", "departed from", "       passed"};
+  const char *statusStr[4] = {
+    "           at",
+    "departed from",
+    "       passed",
+    "           at"
+  };
   // clang-format on
   cursor.setC(10);
   printf(COM2, statusStr[status]);
@@ -227,17 +232,17 @@ void renderTrain(Cursor &cursor, int *data, track_node *track) {
   cursor.setC(24);
   printTrainLoc(passedSensorIdx, passedOffset);
 
-  if (status != 0) {
+  if (status == Departed || status == PassedSensor) {
     cursor.setC(33);
     printf(COM2, " via ");
     printTrainLoc(viaSensorIdx, viaOffset);
-
-    cursor.setC(47);
-    printf(COM2, " to ");
-    printTrainLoc(destNodeIdx, destOffset);
-  } else {
-    cursor.deleteLine();
   }
+  if (status != Stationary) {
+    cursor.setC(47);
+    printf(COM2, " towards ");
+    printTrainLoc(destNodeIdx, destOffset);
+  }
+  cursor.deleteLine();
 }
 
 void displayServer() {

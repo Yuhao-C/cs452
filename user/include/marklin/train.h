@@ -5,6 +5,8 @@
 
 namespace marklin {
 
+const int TRAIN_LENGTH = 217000;
+
 class Train {
  public:
   int id;

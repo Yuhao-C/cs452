@@ -19,6 +19,13 @@ enum Action {
   Track
 };
 
+enum TrainStatus {
+  Stationary,
+  Departed,
+  PassedSensor,
+  Blocked
+};
+
 struct Msg {
   Action action;
   int data[MRV_CAP * 2];

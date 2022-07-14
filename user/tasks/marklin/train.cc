@@ -16,7 +16,13 @@ Train::Train()
       nextSensorDist{0},
       lastSensor{nullptr},
       lastSensorTick{0},
-      isBlocked{false} {}
+      locNodeIdx{-1},
+      locOffset{0},
+      isBlocked{false},
+      viaNodeIdx{-1},
+      viaOffset{0},
+      destNodeIdx{-1},
+      destOffset{0} {}
 
 void Train::setSpeedLevel(SpeedLevel speedLevel) {
   this->speedLevel = speedLevel;
