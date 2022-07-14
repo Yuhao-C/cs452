@@ -4,7 +4,10 @@
   "files.associations": {
     "bwio.h": "c",
     "ts7200.h": "c",
-    "unordered_map": "cpp"
+    "unordered_map": "cpp",
+    "iostream": "cpp",
+    "cassert": "cpp",
+    "ostream": "cpp"
   },
   "makefile.dryrunSwitches": [
     "--always-make",

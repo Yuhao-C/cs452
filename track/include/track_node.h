@@ -30,7 +30,11 @@ struct track_node {
   int num;             /* sensor or switch number */
   track_node *reverse; /* same location, but opposite direction */
   track_edge edge[2];
-  int status; /* for NODE_BRANCH: DIR_STRAIGHT or DIR_CURVED */
+  int status;               /* for NODE_BRANCH: DIR_STRAIGHT or DIR_CURVED */
+  volatile int enterSeg[2]; /* after passing this node, the segment which the
+                      train will enter */
+  volatile int leaveSeg[2]; /* after passing this node, the segment which the
+                      train will leave */
 };
 
 #endif  // TRACK_TRACK_NODE_H_

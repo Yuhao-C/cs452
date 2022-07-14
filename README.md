@@ -47,8 +47,9 @@
     - [Routing](#routing)
       - [Speed](#speed)
       - [Algorithm](#algorithm)
-    - [Sensor Prediction](#sensor-prediction)
+    - [Sensor Attribution](#sensor-attribution)
     - [Speed Estimation](#speed-estimation)
+    - [Track Reservation](#track-reservation)
     - [Fault Tolerance](#fault-tolerance)
       - [Broken Branch](#broken-branch)
       - [Broken Sensor](#broken-sensor)
@@ -606,46 +607,39 @@ For stopping distance measurement, we set the train to a certain speed level, th
 
 #### Speed
 
-We support 2 speed levels `l, h`, for routing.
-
-- `l` - speed level `10 inc`
-- `h` - speed level `14 inc`
-
-For stopping, we use speed level `7 dec`. So trains will reduce their speed from `l` or `h` to `7 dec` before stopping.
+We use speed level `10` for all trains for routing.
 
 #### Algorithm
 
 We use `Dijkstra's shortest path` algorithm for routing.
 
-The routing happens in 2 stages.
+If the entire path to the final destination is not reserved, we will reserve the entire path for the train and route the train to its destination.
 
-- Stage 1:
+On the other hand, if some segments of path is reserved by other trains, we will reserve the track up to the segment before entering into the reserved track, and route the train there. In this case, just before sending the `stop (speed 0)` command, it will try to route the train to its destination again. If it is able to reserve new track segments ahead, then it aborts stopping and keep running until the end of new segments reserved. Otherwise, we stop the train as planned. This helps reduce frequent stops.
 
-  - find sensor for slow down - `slowDownSensor`
-  - find sensor before stop - `stopSensor`
-  - find `stopDelay` after `stopSensor` for sending stop command
-  - find route from `start` to `slowDownSensor`, and modify switches accordingly.
+When the train triggers a sensor, it will free up the segment behind that sensor and triggers the `reroute` event for other blocked trains, so that blocked trains get a chance to be unblocked.
 
-  From `dest` + `offset`, we first go back `stop dist` to find `stopLocation`. Then find the last sensor before that, call it `stopSensor`. Then based on the distance between `stopSensor` and `stopLocation`, we can calculate `stopDelay`. Then from `stopSensor`, we go back additional `100cm`, and find the last sensor before that, call it `slowDownSensor`.
+### Sensor Attribution
 
-  When going back from dest, if there are branches, we choose the branch that will result in shorter distance.
+We use current switch status and the triggered sensor to find the next sensor.
 
-- Stage 2
-  - find route from `slowDownSensor` to `destination`, and modify switches accordingly.
-  - When train triggers `slowDownSensor`, reduce its speed to `7 dec`.
-  - When train triggers `stopSensor`, we set a `timer` of period `stopDelay`. After the delay, we set the train speed to zero.
-
-### Sensor Prediction
-
-Currently we can predict sensor when there is only one train running on the track.
-We use current switch status and the triggered sensor to find the next sensor, and use pre-calibrated velocity to predict the next trigger time.
-
-For sensor prediction to work, we must specify the start location of the train by using `loc` command and manually input the next sensor the train will trigger.
+When a sensor is triggered, we compare this sensor to the trains' predicted next sensors.
+We assume that no two trains will have the same predicted next sensor based on our correct implementation of track reservation.
+The above assumption holds even if a single sensor is missed.
 
 ### Speed Estimation
 
 On every sensor trigger we estimate the average velocity of the train in current section (between the currently triggered sensor and the last triggered sensor), using distance between sensors and the trigger time.
-Currently we only display the estimate and do not update the calibration data.
+Currently we do not print this information and do not update the calibration data.
+
+### Track Reservation
+
+![Track segments](track_segments.png)
+
+We divide the track into segments where each segment has boundaries on sensors.
+For large segments that contains multiple independent paths (29 & 31, 30 & 32 & 33), we place segment boundaries on branches so that we can reserve only parts required by the trip.
+Trains try to reserve tracks during routing. Whenever a train passed a sensor, we consider it as leaving a segment and thus free it.
+At any time, there can be at most one train in each segment. This avoids cases of collision.
 
 ### Fault Tolerance
 
@@ -653,8 +647,10 @@ Currently we only display the estimate and do not update the calibration data.
 
 For broken branches we set the distance of the broken edge to a very large number, so that our routing algorithm will try to avoid them and find a shorter path. However, this won't work if the broken edge is the only path to the destination.
 
-Currently we have only recorded the broken branches for Track B.
-
 #### Broken Sensor
 
-If the triggered sensor is not the expected one, we try to search for next two expected sensor and match. Speed estimation still works because we will calculate the distance between the actual triggered sensor and the last triggered sensor. This can handle the case when at most two consecutive sensors are broken. If we still can't match a sensor, we consider it as an error and issue emergency stop.
+If the triggered sensor is not the predicted next triggered sensor by any trains, we try to compare it with the next sensor after the predicted next triggered sensor of any trains. If we find a match, then we assume that the matching train missed one sensor.
+
+The above assumption holds if there are no more than 1 consecutive broken sensor.
+
+Speed estimation still works because we will calculate the distance between the actual triggered sensor and the last triggered sensor. This can handle the case when at most two consecutive sensors are broken. If we still can't match a sensor, we consider it as an error and issue emergency stop.

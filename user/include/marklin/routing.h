@@ -2,6 +2,7 @@
 #define USER_MARKLIN_ROUTING_H_
 
 #include "lib/string.h"
+#include "reservation.h"
 #include "track_data.h"
 #include "world.h"
 
@@ -18,24 +19,27 @@ struct PathInfo {
 void runRouting();
 
 class Routing {
-  int trainId;
   int trackSize;
   int worldTid;
-  int routeStatus;
-  int stopSensorDelay;
-  track_node* destNode;
-  track_node* slowDownSensor;
-  track_node* stopSensor;
+  int reservationServer;
   track_node track[TRACK_MAX];
   TrackSet trackSet;
 
-  int trainStopSensor[80][2];
+  int trainStopSensor[80][3];
 
   void clearStatus();
-  int route(track_node* src, track_node* dest, track_node* (&path)[TRACK_MAX],
-            bool mock);
-  // bool canGo(track_node* src, track_node* dst);
+  int route(track_node* src, track_node* dest, track_node*& blockedSensor,
+            track_node* (&path)[TRACK_MAX], int trainId, ResvRequest& req);
   void onDestinationSet(int* data);
+  void reserveTrack(track_node* (&path)[TRACK_MAX], int trainId,
+                    ResvRequest& req);
+  void switchTurnout(track_node* (&path)[TRACK_MAX]);
+  void handleReroute(int* data);
+  void updateTrainLoc(int trainId, track_node* dest, int offset);
+  void handleDeparture(int trainId, int speed, int delay, bool rerouteOnSlow,
+                       bool rerouteOnStop);
+  void setTrainBlocked(int trainId, bool blocked);
+  int calcDist(track_node* (&path)[TRACK_MAX]);
 
  public:
   Routing();

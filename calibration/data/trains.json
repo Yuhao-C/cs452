@@ -7,7 +7,7 @@
       "decelSlow": 54562,
       "accelDist": 351750,
       "accelDelay": 270,
-      "stopDist": 436000
+      "stopDist": 450000
     },
     {
       "id": 24,
@@ -16,7 +16,7 @@
       "decelSlow": 46797,
       "accelDist": 373529,
       "accelDelay": 273,
-      "stopDist": 460000
+      "stopDist": 440000
     },
     {
       "id": 58,

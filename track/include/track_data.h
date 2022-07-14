@@ -7,3 +7,6 @@
 
 int init_tracka(track_node *track);
 int init_trackb(track_node *track);
+
+void initSegA(track_node *track);
+void initSegB(track_node *track);

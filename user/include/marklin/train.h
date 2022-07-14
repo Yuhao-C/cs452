@@ -27,6 +27,13 @@ class Train {
   int locNodeIdx;
   int locOffset;
 
+  bool isBlocked;
+
+  int viaNodeIdx;
+  int viaOffset;
+  int destNodeIdx;
+  int destOffset;
+
   int accelSlow;
   int decelSlow;
   int velocity;

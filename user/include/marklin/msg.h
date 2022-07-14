@@ -15,11 +15,14 @@ struct Msg {
     InitTrack = 0x30,     // data = {trackSet}
     SetTrainLoc,          // data = {trainId, nodeIndex, offset, direction}
     SensorTriggered,      // data = {sensorNum, tick[, trainId, predictNext]}
-    SetDestination,       // data = {trainId, dest_node, offset[, speedLevel |
-                          // stopDist, velocity, src_node, next_sensor]}
+    SetDestination,   // data = {trainId, dest_node | -1, offset[, speedLevel |
+                      // stopDist, velocity, src_node, next_sensor]}
+    Reroute,          // data = {trainId}
+    Depart,           // data = {trainId, nodeIndex, offset}
+    SetTrainBlocked,  // data = {trainId, blocked}
   };
   Action action;
-  int data[11];
+  int data[12];
   int len;
 
   int getTrainId() const;

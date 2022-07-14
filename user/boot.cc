@@ -6,6 +6,7 @@
 #include "k1.h"
 #include "k3.h"
 #include "lib/timer.h"
+#include "marklin/reservation.h"
 #include "marklin/routing.h"
 #include "marklin/world.h"
 #include "marklin_server.h"
@@ -40,6 +41,8 @@ void boot() {
   uart::bootstrap();
 
   create(1, marklin::cmdServer);
+
+  create(2, marklin::ReservationServer::runServer);
 
   create(1, marklin::runWorld);
 

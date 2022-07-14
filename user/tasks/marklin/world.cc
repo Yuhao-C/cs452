@@ -2,6 +2,9 @@
 
 #include "clock_server.h"
 #include "display_server.h"
+#include "lib/async_msg.h"
+#include "lib/log.h"
+#include "marklin/reservation.h"
 #include "marklin/routing.h"
 #include "marklin_server.h"
 #include "name_server.h"
@@ -54,34 +57,36 @@ void World::run() {
       continue;
     }
 
+    reply(senderTid, 0);
+
     switch (msg.action) {
       case Msg::Action::InitTrack:
-        reply(senderTid, 0);
         init((TrackSet)msg.data[0]);
         break;
       case Msg::Action::SetTrainLoc:
-        reply(senderTid, 0);
         onSetTrainLoc(msg);
         break;
       case Msg::Action::SwitchCmd:
-        reply(senderTid, 0);
         onSwitch(msg);
         break;
       case Msg::Action::SensorTriggered:
-        reply(senderTid, 0);
         onSensorTrigger(msg);
         break;
       case Msg::Action::SetDestination:
-        reply(senderTid, 0);
+      case Msg::Action::Reroute:
         onSetDestination(msg);
         break;
       case Msg::Action::TrainCmd:
-        reply(senderTid, 0);
         onSetTrainSpeed(senderTid, msg);
         break;
       case Msg::Action::ReverseCmd:
-        reply(senderTid, 0);
         onReverseTrain(msg);
+        break;
+      case Msg::Action::Depart:
+        onTrainDepart(msg);
+        break;
+      case Msg::Action::SetTrainBlocked:
+        getTrain(msg.data[0])->isBlocked = msg.data[1];
         break;
     }
   }
@@ -97,6 +102,11 @@ void World::init(TrackSet trackSet) {
 
   marklinServerTid = whoIs(MARKLIN_SERVER_NAME);
   displayServerTid = whoIs(DISPLAY_SERVER_NAME);
+
+  send(marklinServerTid, Msg::go());
+  for (int i = 0; i < 6; ++i) {
+    send(marklinServerTid, Msg::tr(16, trains[i].id));
+  }
 
   // initialize switches
   char switchInitA[] = "SSSSCSSSSSCSSSSSSCSCSC";
@@ -133,11 +143,34 @@ void World::onSetTrainLoc(const Msg &msg) {
   t->direction =
       direction == 'f' ? Train::Direction::Forward : Train::Direction::Backward;
 
-  // send to display server
-  send(displayServerTid,
-       view::Msg{view::Action::Predict,
-                 {t->id, (int)t->nextSensor->name, t->nextSensorTick, 0, 0},
-                 5});
+  // reserve occupied track
+  ResvRequest request;
+  int resvServer = whoIs(RESERVATION_SERVER_NAME);
+  send(resvServer, request, request);
+  // request.print();
+  if (offset <= 0) {
+    assert(request.reserve(trainId, track[nodeIdx].leaveSeg[0]));
+  } else {
+    assert(request.reserve(trainId, track[nodeIdx].enterSeg[0]));
+  }
+  // request.print();
+  send(resvServer, request);
+
+  // send to display server TODO: change format
+  // clang-format off
+  send(displayServerTid, view::Msg{
+    view::Action::Train, {
+      t - trains, 0,
+      t->locNodeIdx, t->locOffset,
+      t->viaNodeIdx, t->viaOffset,
+      t->destNodeIdx, t->destOffset,
+    }
+  });
+  // send(displayServerTid,
+  //      view::Msg{view::Action::Predict,
+  //                {t->id, (int)t->nextSensor->name, t->nextSensorTick, 0, 0},
+  //                5});
+  // clang-format on
 }
 
 void World::onSwitch(const Msg &msg) {
@@ -158,12 +191,44 @@ void World::onSensorTrigger(const Msg &msg) {
   int offDistance;
   Train *t = predictTrainBySensor(sensorNum, offDistance);
 
+  ResvRequest temp, request;
+  int resvServerTid = whoIs(RESERVATION_SERVER_NAME);
+  send(resvServerTid, temp, request);
+  // request.print();
+
   if (!t) {
     // no train is expected to trigger this sensor
-    // something went wrong
+    // this should happen only if a switch is broken
+    // for (int i = 0; i < 6; ++i) {
+    //   send(marklinServerTid, Msg::tr(0, trains[i].id));
+    // }
+    log("cannot find train");
     send(marklinServerTid, Msg::stop());
     return;
   }
+
+  track_node *sensor = getSensor(sensorNum);
+  if (t->nextSensor && t->nextSensor != sensor) {
+    // if a sensor is skipped
+    log("skipped sensor");
+    if (!freeSegments(t->nextSensor, t, request)) {
+      // cannot free a track (not reserved by the train)
+      // send(marklinServerTid, Msg::tr(0, t->id));
+      log("cannot free t->nextSensor");
+      send(marklinServerTid, Msg::stop());
+      return;
+    }
+    t->lastSensor = t->nextSensor;
+    log("recovered skipped sensor");
+  }
+  if (!freeSegments(sensor, t, request)) {
+    // cannot free a track (not reserved by the train)
+    // send(marklinServerTid, Msg::tr(0, t->id));
+    log("cannot free sensor");
+    send(marklinServerTid, Msg::stop());
+    return;
+  }
+  send(resvServerTid, request);
 
   int totalDistance = t->nextSensorDist + offDistance;
   int totalTick = tick - t->lastSensorTick;
@@ -192,20 +257,42 @@ void World::onSensorTrigger(const Msg &msg) {
     // may need to do something?
   }
 
+  for (int i = 0; i < 6; ++i) {
+    if (trains[i].isBlocked) {
+      onSetDestination(Msg{Msg::Action::SetDestination, {trains[i].id, -1}, 2});
+    }
+  }
+
   // send to display server
-  send(displayServerTid,
-       view::Msg{view::Action::Predict,
-                 {t->id, (int)t->nextSensor->name, t->nextSensorTick, timeDiff,
-                  distDiff, avgVelocity},
-                 6});
+  // clang-format off
+  send(displayServerTid, view::Msg{
+    view::Action::Train, {
+      t - trains, 2,
+      sensorNum, 0,
+      t->viaNodeIdx, t->viaOffset,
+      t->destNodeIdx, t->destOffset,
+    }
+  });
+  // send(displayServerTid,
+  //      view::Msg{view::Action::Predict,
+  //                {t->id, (int)t->nextSensor->name, t->nextSensorTick, timeDiff,
+  //                 distDiff, avgVelocity},
+  //                6});
+  // clang-format on
 }
 
 void World::onSetDestination(const Msg &msg) {
+  log("world received %s: train %d",
+      msg.action == Msg::Action::Reroute ? "reroute" : "setdest", msg.data[0]);
   Train *train = getTrain(msg.data[0]);
+  if (msg.data[1] != -1 && msg.action != Msg::Action::Reroute) {
+    train->destNodeIdx = msg.data[1];
+    train->destOffset = msg.data[2];
+  }
   // send to routing
   // clang-format off
   Msg msgSend{
-    Msg::Action::SetDestination,
+    msg.action,
     {
       train->id,
       train->accelSlow,
@@ -216,13 +303,17 @@ void World::onSetDestination(const Msg &msg) {
       train->velocity,
       train->locNodeIdx,
       train->locOffset - train->direction,
-      msg.data[1],
-      msg.data[2] - train->direction
+      train->destNodeIdx,
+      train->destOffset - train->direction,
+      train->direction,
     },
-    11
+    12
   };
   // clang-format on
-  send(routingServerTid, msgSend);
+  asyncSend(routingServerTid, msgSend);
+  log("send onSetDestination %d: from %s+%d to %s+%d", train->id,
+      track[train->locNodeIdx].name, train->locOffset,
+      track[train->destNodeIdx].name, train->destOffset);
 }
 
 int World::onSetTrainSpeed(int senderTid, const Msg &msg) {
@@ -238,15 +329,17 @@ int World::onSetTrainSpeed(int senderTid, const Msg &msg) {
         train->isReversing = false;
         train->reverseDirection();
 
-        // send to display server
-        send(displayServerTid,
-             view::Msg{view::Action::Predict,
-                       {train->id, (int)train->nextSensor->name, 0, 0, 0},
-                       5});
+        // send to display server TODO: handle reverse
+        // send(displayServerTid,
+        //      view::Msg{view::Action::Predict,
+        //                {train->id, (int)train->nextSensor->name, 0, 0, 0},
+        //                5});
+      } else if (cmd == 10 || cmd == 26) {
+        train->isBlocked = false;
       }
 
       train->setSpeedLevel(Train::getSpeedLevel(cmd));
-      // println(COM2, "%d", clock::time());
+      // log("%d", clock::time());
       send(marklinServerTid, msg);
       return 0;
     }
@@ -269,54 +362,79 @@ int World::onReverseTrain(const Msg &msg) {
   }
 }
 
+void World::onTrainDepart(const Msg &msg) {
+  Train *train = getTrain(msg.data[0]);
+  train->viaNodeIdx = msg.data[1];
+  train->viaOffset = msg.data[2] + train->direction;
+  // clang-format off
+  send(displayServerTid, view::Msg{
+    view::Action::Train, {
+      train - trains, 1,
+      train->locNodeIdx, train->locOffset,
+      train->viaNodeIdx, train->viaOffset,
+      train->destNodeIdx, train->destOffset,
+    }
+  });
+  train->locNodeIdx = train->viaNodeIdx;
+  train->locOffset = train->viaOffset;
+  log("train %d via %s+%d", train->id, track[train->locNodeIdx].name, train->viaOffset);
+  // clang-format on
+}
+
 Train *World::predictTrainBySensor(int sensorNum, int &offDist) {
-  int searchRound = 2;
   track_node *expected[6];
   int offDistances[6];
 
-  int predicted = -1;
   for (int i = 0; i < 6; ++i) {
     Train *t = &trains[i];
     if (t->nextSensor && t->nextSensor->type == NODE_SENSOR &&
         t->nextSensor->num == sensorNum) {
-      if (predicted < 0 ||
-          t->nextSensorTick < trains[predicted].nextSensorTick) {
-        predicted = i;
-      }
+      offDist = 0;
+      return t;
     }
     expected[i] = t->nextSensor;
     offDistances[i] = 0;
   }
 
-  if (predicted >= 0) {
-    offDist = 0;
-    return &trains[predicted];
-  }
-
-  for (int round = 0; round < searchRound; ++round) {
-    for (int i = 0; i < 6; ++i) {
-      if (expected[i] && expected[i]->type == NODE_SENSOR) {
-        int distance;
-        expected[i] = findNextSensor(expected[i], distance);
-        offDistances[i] += distance;
-        if (expected[i] && expected[i]->type == NODE_SENSOR &&
-            expected[i]->num == sensorNum) {
-          offDist = offDistances[i];
-          return &trains[i];
-          // TODO: check train expected time/distance to find out which train
-          // when one sensor broken
-          // TODO: handle case when one switch broken
-        }
+  for (int i = 0; i < 6; ++i) {
+    Train *t = &trains[i];
+    if (!t->isBlocked && expected[i] && expected[i]->type == NODE_SENSOR) {
+      int distance;
+      expected[i] = findNextSensor(expected[i], distance);
+      offDistances[i] += distance;
+      if (expected[i] && expected[i]->type == NODE_SENSOR &&
+          expected[i]->num == sensorNum) {
+        offDist = offDistances[i];
+        return &trains[i];
+        // TODO: check train expected time/distance to find out which train
+        // when one sensor broken
+        // TODO: handle case when one switch broken
       }
     }
   }
 
-  if (predicted >= 0) {
-    offDist = offDistances[predicted];
-    return &trains[predicted];
+  return nullptr;
+}
+
+bool World::freeSegments(track_node *sensor, Train *train,
+                         ResvRequest &request) {
+  // leave current segment
+  log("try to free %d", sensor->leaveSeg[0]);
+  if (!request.free(train->id, sensor->leaveSeg[0])) {
+    return false;
   }
 
-  return nullptr;
+  int leaveSeg = sensor->leaveSeg[1];
+  // if coming from a segment boundary which is a branch
+
+  if (leaveSeg >= 0 && train->lastSensor &&
+      leaveSeg == train->lastSensor->enterSeg[0]) {
+    log("try to free %d (branch)", leaveSeg);
+    if (!request.free(train->id, leaveSeg)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 track_node *World::getSensor(int sensorNum) { return &track[sensorNum]; }

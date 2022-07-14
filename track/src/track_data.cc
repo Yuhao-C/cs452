@@ -1,7 +1,6 @@
 /* THIS FILE IS GENERATED CODE -- DO NOT EDIT */
 
 #include "../include/track_data.h"
-#define BROKEN_DIST 100000000
 
 static void *memset(void *s, int c, unsigned int n) {
   unsigned char *p = (unsigned char *)s;
@@ -1337,6 +1336,8 @@ int init_tracka(track_node *track) {
   track[143].status = 0;
   track[143].type = NODE_EXIT;
   track[143].reverse = &track[142];
+
+  initSegA(track);
   return 144;
 }
 
@@ -2642,5 +2643,7 @@ int init_trackb(track_node *track) {
   track[139].status = 0;
   track[139].type = NODE_EXIT;
   track[139].reverse = &track[138];
+
+  initSegB(track);
   return 140;
 }

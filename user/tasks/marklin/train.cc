@@ -15,7 +15,8 @@ Train::Train()
       nextSensorTick{0},
       nextSensorDist{0},
       lastSensor{nullptr},
-      lastSensorTick{0} {}
+      lastSensorTick{0},
+      isBlocked{false} {}
 
 void Train::setSpeedLevel(SpeedLevel speedLevel) {
   this->speedLevel = speedLevel;

@@ -4,6 +4,7 @@
 #include "lib/io.h"
 #include "marklin_server.h"
 #include "name_server.h"
+#include "track_data.h"
 #include "user/message.h"
 
 namespace view {
@@ -81,6 +82,34 @@ void sensorInit(Cursor &sensorCursor) {
   println(COM2, "  Most Recently Triggered Sensors");
   sensorCursor.setR(sensorCursor.r + 1);
   println(COM2, "───────────────────────────────────");
+}
+
+void trackDataInit(int trackSet, track_node *track) {
+  assert(trackSet == 'A' || trackSet == 'B');
+  if (trackSet == 'A') {
+    init_tracka(track);
+  } else {
+    init_trackb(track);
+  }
+}
+
+void trainDisplayInit(Cursor &trainCursor) {
+  int trains[6] = {1, 24, 58, 74, 78, 79};
+  for (int i = 0; i < 6; ++i) {
+    println(COM2, "Train %2d", trains[i]);
+  }
+}
+
+void printTrainLoc(int nodeIdx, int offset) {
+  char sensorGroup;
+  int sensorNum;
+  marklin::Sensor::getSensorName(nodeIdx, sensorGroup, sensorNum);
+  // clang-format off
+  printf(COM2, "%c%02d%c%03dmm",
+         sensorGroup, sensorNum,
+         offset >= 0 ? '+' : '-',
+         (offset >= 0 ? offset : -offset) / 1000);
+  // clang-format on
 }
 
 void renderInput(Cursor &cursor, char ch) {
@@ -176,6 +205,41 @@ void renderPredict(Cursor &cursor, int *data) {
   cursor.deleteLine();
 }
 
+void renderTrain(Cursor &cursor, int *data, track_node *track) {
+  int trainIndex = data[0];
+  int status = data[1];
+  int passedSensorIdx = data[2];
+  int passedOffset = data[3];
+  int viaSensorIdx = data[4];
+  int viaOffset = data[5];
+  int destNodeIdx = data[6];
+  int destOffset = data[7];
+
+  Cursor::hideCursor();
+  cursor.setR(26 + trainIndex);
+
+  // clang-format off
+  const char *statusStr[3] = {"           at", "departed from", "       passed"};
+  // clang-format on
+  cursor.setC(10);
+  printf(COM2, statusStr[status]);
+
+  cursor.setC(24);
+  printTrainLoc(passedSensorIdx, passedOffset);
+
+  if (status != 0) {
+    cursor.setC(33);
+    printf(COM2, " via ");
+    printTrainLoc(viaSensorIdx, viaOffset);
+
+    cursor.setC(47);
+    printf(COM2, " to ");
+    printTrainLoc(destNodeIdx, destOffset);
+  } else {
+    cursor.deleteLine();
+  }
+}
+
 void displayServer() {
   registerAs(DISPLAY_SERVER_NAME);
 
@@ -197,10 +261,14 @@ void displayServer() {
   Cursor inputCursor{22, 1};
   inputCursor.putstr("> ");
 
+  Cursor trainCursor{26, 1};
+  trainDisplayInit(trainCursor);
+
   Cursor invalidCmdCursor{23, 1};
 #endif
 
   bool quit = false;
+  track_node track[TRACK_MAX];
 
   while (true) {
     struct Msg msg;
@@ -223,6 +291,12 @@ void displayServer() {
         break;
       case Predict:
         renderPredict(predictCursor, msg.data);
+        break;
+      case Train:
+        renderTrain(trainCursor, msg.data, track);
+        break;
+      case Track:
+        trackDataInit(msg.data[0], track);
         break;
       case InvalidCmd:
         renderInvalidCmd(invalidCmdCursor, msg.data[0]);

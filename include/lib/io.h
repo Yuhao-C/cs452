@@ -3,6 +3,8 @@
 
 #include "kern/arch/ts7200.h"
 
+typedef const char *va_list;
+
 void ioBootstrap(int _uart1Tid, int _uart2Tid);
 
 int setfifo(unsigned int channel, int state);
@@ -28,5 +30,7 @@ void putw(unsigned int channel, int n, char fc, const char *bf);
 void printf(unsigned int channel, const char *fmt, ...);
 
 void println(unsigned int channel, const char *fmt, ...);
+
+void format(unsigned int channel, const char *fmt, va_list va);
 
 #endif  // KERN_LIB_IO_H_

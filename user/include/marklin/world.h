@@ -9,6 +9,9 @@
 #define WORLD_NAME "WORLD"
 
 namespace marklin {
+
+class ResvRequest;
+
 enum class TrackSet { Unknown, TrackA = 'A', TrackB };
 
 void runWorld();
@@ -29,8 +32,10 @@ class World {
   int onSetTrainSpeed(int senderTid, const Msg &msg);
   int onReverseTrain(const Msg &msg);
   void onSetTrainLoc(const Msg &msg);
+  void onTrainDepart(const Msg &msg);
 
   Train *predictTrainBySensor(int sensorNum, int &offDist);
+  bool freeSegments(track_node *sensor, Train *train, ResvRequest &request);
 
  public:
   World();

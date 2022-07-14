@@ -1,0 +1,263 @@
+- id: A1
+  enter: [29, -1]
+  leave: [18, 18]
+- id: A2
+  enter: [18, -1]
+  leave: [29, 29]
+- id: A3
+  enter: [31, -1]
+  leave: [0, 0]
+- id: A4
+  enter: [0, -1]
+  leave: [31, 29]
+- id: A5
+  enter: [28, -1]
+  leave: [16, 16]
+- id: A6
+  enter: [16, -1]
+  leave: [28, 28]
+- id: A7
+  enter: [15, -1]
+  leave: [28, 28]
+- id: A8
+  enter: [28, -1]
+  leave: [15, 15]
+- id: A9
+  enter: [14, -1]
+  leave: [28, 28]
+- id: A10
+  enter: [28, -1]
+  leave: [14, 14]
+- id: A11
+  enter: [28, -1]
+  leave: [13, 13]
+- id: A12
+  enter: [13, -1]
+  leave: [28, 28]
+- id: A13
+  enter: [29, -1]
+  leave: [19, 19]
+- id: A14
+  enter: [19, -1]
+  leave: [29, 29]
+- id: A15
+  enter: [20, -1]
+  leave: [29, 29]
+- id: A16
+  enter: [29, -1]
+  leave: [20, 20]
+
+- id: B1
+  enter: [3, -1]
+  leave: [23, 23]
+- id: B2
+  enter: [23, -1]
+  leave: [3, 3]
+- id: B3
+  enter: [7, -1]
+  leave: [23, 23]
+- id: B4
+  enter: [23, -1]
+  leave: [7, 7]
+- id: B5
+  enter: [2, -1]
+  leave: [22, 22]
+- id: B6
+  enter: [22, -1]
+  leave: [2, 2]
+- id: B7
+  enter: [14, -1]
+  leave: [34, 34]
+- id: B8
+  enter: [34, -1]
+  leave: [14, 14]
+- id: B9
+  enter: [16, -1]
+  leave: [36, 36]
+- id: B10
+  enter: [36, -1]
+  leave: [16, 16]
+- id: B11
+  enter: [15, -1]
+  leave: [35, 35]
+- id: B12
+  enter: [35, -1]
+  leave: [15, 15]
+- id: B13
+  enter: [26, -1]
+  leave: [8, 8]
+- id: B14
+  enter: [8, -1]
+  leave: [26, 26]
+- id: B15
+  enter: [0, -1]
+  leave: [21, 21]
+- id: B16
+  enter: [21, -1]
+  leave: [0, 0]
+
+- id: C1
+  enter: [7, -1]
+  leave: [26, 26]
+- id: C2
+  enter: [26, -1]
+  leave: [7, 7]
+- id: C3
+  enter: [17, -1]
+  leave: [30, 32]
+- id: C4
+  enter: [30, -1]
+  leave: [17, 17]
+- id: C5
+  enter: [32, -1]
+  leave: [21, 21]
+- id: C6
+  enter: [21, -1]
+  leave: [32, 30]
+- id: C7
+  enter: [30, -1]
+  leave: [28, 28]
+- id: C8
+  enter: [28, -1]
+  leave: [30, 33]
+- id: C9
+  enter: [21, -1]
+  leave: [23, 23]
+- id: C10
+  enter: [23, -1]
+  leave: [21, 21]
+- id: C11
+  enter: [22, -1]
+  leave: [31, 31]
+- id: C12
+  enter: [31, -1]
+  leave: [22, 22]
+- id: C13
+  enter: [1, -1]
+  leave: [29, 31]
+- id: C14
+  enter: [29, -1]
+  leave: [1, 1]
+- id: C15
+  enter: [4, -1]
+  leave: [32, 32]
+- id: C16
+  enter: [32, -1]
+  leave: [4, 4]
+
+- id: D1
+  enter: [26, -1]
+  leave: [6, 6]
+- id: D2
+  enter: [6, -1]
+  leave: [26, 26]
+- id: D3
+  enter: [24, -1]
+  leave: [2, 2]
+- id: D4
+  enter: [2, -1]
+  leave: [24, 24]
+- id: D5
+  enter: [10, -1]
+  leave: [27, 27]
+- id: D6
+  enter: [27, -1]
+  leave: [10, 10]
+- id: D7
+  enter: [27, -1]
+  leave: [9, 9]
+- id: D8
+  enter: [9, -1]
+  leave: [27, 27]
+- id: D9
+  enter: [12, -1]
+  leave: [27, 27]
+- id: D10
+  enter: [27, -1]
+  leave: [12, 12]
+- id: D11
+  enter: [4, -1]
+  leave: [33, 33]
+- id: D12
+  enter: [33, -1]
+  leave: [4, 4]
+- id: D13
+  enter: [3, -1]
+  leave: [25, 25]
+- id: D14
+  enter: [25, -1]
+  leave: [3, 3]
+- id: D15
+  enter: [8, -1]
+  leave: [25, 25]
+- id: D16
+  enter: [25, -1]
+  leave: [8, 8]
+
+- id: E1
+  enter: [26, -1]
+  leave: [5, 5]
+- id: E2
+  enter: [5, -1]
+  leave: [26, 26]
+- id: E3
+  enter: [6, -1]
+  leave: [24, 24]
+- id: E4
+  enter: [24, -1]
+  leave: [6, 6]
+- id: E5
+  enter: [10, -1]
+  leave: [24, 24]
+- id: E6
+  enter: [24, -1]
+  leave: [10, 10]
+- id: E7
+  enter: [9, -1]
+  leave: [1, 1]
+- id: E8
+  enter: [1, -1]
+  leave: [9, 9]
+- id: E9
+  enter: [27, -1]
+  leave: [11, 11]
+- id: E10
+  enter: [11, -1]
+  leave: [27, 27]
+- id: E11
+  enter: [12, -1]
+  leave: [33, 30]
+- id: E12
+  enter: [33, -1]
+  leave: [12, 12]
+- id: E13
+  enter: [25, -1]
+  leave: [11, 11]
+- id: E14
+  enter: [11, -1]
+  leave: [25, 25]
+- id: E15
+  enter: [22, -1]
+  leave: [5, 5]
+- id: E16
+  enter: [5, -1]
+  leave: [22, 22]
+
+- id: BR5
+  enter: [-1, 33]
+  leave: [-1, 30]
+- id: BR6
+  enter: [-1, 30]
+  leave: [-1, 32]
+- id: BR7
+  enter: [-1, 30]
+  leave: [-1, 33]
+- id: BR11
+  enter: [-1, 31]
+  leave: [-1, 29]
+- id: BR14
+  enter: [29, -1]
+  leave: [31, -1]
+- id: BR18
+  enter: [-1, 32]
+  leave: [-1, 30]

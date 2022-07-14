@@ -131,6 +131,7 @@ void handleCmd(char* cmd, int displayServerTid, int marklinServerTid,
       track = cmds[1][0];
       clearInvalidCommand(displayServerTid);
       send(worldTid, marklin::Msg{marklin::Msg::Action::InitTrack, {track}, 1});
+      send(displayServerTid, view::Msg{view::Action::Track, {track}, 1});
     } else {
       showInvalidCommand(displayServerTid);
       return;
@@ -141,12 +142,15 @@ void handleCmd(char* cmd, int displayServerTid, int marklinServerTid,
       return;
     }
     int trainNum;
+    int sensorIdx;
     int nodeIdx;
     int offset;
-    if (parseInt(cmds[1], trainNum) && parseInt(cmds[2], nodeIdx) &&
-        parseInt(cmds[3], offset) && (cmds[4][0] == 'f' || cmds[4][0] == 'b')) {
+    if (parseInt(cmds[1], trainNum) && 'A' <= cmds[2][0] && cmds[2][0] <= 'E' &&
+        parseInt(cmds[2] + 1, sensorIdx) && parseInt(cmds[3], offset) &&
+        (cmds[4][0] == 'f' || cmds[4][0] == 'b')) {
       char direction = cmds[4][0];
       clearInvalidCommand(displayServerTid);
+      nodeIdx = (cmds[2][0] - 'A') * 16 + sensorIdx - 1;
       send(worldTid, marklin::Msg{marklin::Msg::Action::SetTrainLoc,
                                   {trainNum, nodeIdx, offset * 1000, direction},
                                   4});
@@ -160,13 +164,16 @@ void handleCmd(char* cmd, int displayServerTid, int marklinServerTid,
       return;
     }
     int trainNum;
+    int sensorIdx;
     int destIdx;
     int destOffset;
-    if (!parseInt(cmds[1], trainNum) || !parseInt(cmds[2], destIdx) ||
-        !parseInt(cmds[3], destOffset)) {
+    if (!parseInt(cmds[1], trainNum) ||
+        !('A' <= cmds[2][0] && cmds[2][0] <= 'E') ||
+        !parseInt(cmds[2] + 1, sensorIdx) || !parseInt(cmds[3], destOffset)) {
       showInvalidCommand(displayServerTid);
       return;
     }
+    destIdx = (cmds[2][0] - 'A') * 16 + sensorIdx - 1;
     clearInvalidCommand(displayServerTid);
     send(worldTid, marklin::Msg{marklin::Msg::Action::SetDestination,
                                 {trainNum, destIdx, destOffset * 1000, 10},
@@ -186,7 +193,7 @@ void consoleReader() {
   int marklinServerTid = whoIs(MARKLIN_SERVER_NAME);
   int worldTid = whoIs(WORLD_NAME);
 
-  send(marklinServerTid, marklin::Msg::go());
+  // send(marklinServerTid, marklin::Msg::go());
 
   char cmd[32];
   int cmdIdx = 0;

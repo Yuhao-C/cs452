@@ -3,12 +3,16 @@
 #include "clock_server.h"
 #include "lib/assert.h"
 #include "lib/io.h"
+#include "lib/log.h"
 #include "lib/math.h"
+#include "marklin/reservation.h"
 #include "marklin/world.h"
 #include "marklin_server.h"
 #include "name_server.h"
 #include "user/message.h"
 #include "user/task.h"
+
+#define BLOCK_DIST 10000000
 
 namespace marklin {
 
@@ -18,33 +22,36 @@ void runRouting() {
 }
 
 void awaitStop() {
-  // println(COM2, "task created");
   int senderTid;
-  int data[3];
+  int data[5];
   receive(senderTid, data);
   reply(senderTid);
 
   int delay = data[0];
   int worldTid = data[1];
   int trainId = data[2];
+  bool rerouteOnSlow = data[3];
+  bool rerouteOnStop = data[4];
 
   clock::delay(delay);
-  send(worldTid, Msg::tr(0, trainId));
-  // println(COM2, "sent train stop");
+  if (rerouteOnSlow) {
+    log("[routing]: reroute before stop train %d", trainId);
+    send(worldTid, marklin::Msg{marklin::Msg::Action::Reroute, {trainId}, 1});
+  } else {
+    send(worldTid, Msg::tr(0, trainId));
+    if (rerouteOnStop) {
+      clock::delay(400);
+      log("[routing]: reroute after stop train %d", trainId);
+      send(worldTid, Msg{Msg::Action::SetDestination, {trainId, -1}, 2});
+    }
+  }
 }
 
-Routing::Routing()
-    : trainId{0},
-      worldTid{0},
-      routeStatus{0},
-      stopSensorDelay{0},
-      destNode{nullptr},
-      slowDownSensor{nullptr},
-      stopSensor{nullptr} {
-  int senderTid;
+Routing::Routing() : worldTid{0} {
+  reservationServer = whoIs(RESERVATION_SERVER_NAME);
   registerAs(ROUTING_SERVER_NAME);
-  receive(senderTid, trackSet);
-  reply(senderTid);
+  receive(worldTid, trackSet);
+  reply(worldTid);
   if (trackSet == TrackSet::TrackA) {
     trackSize = init_tracka(track);
   } else {
@@ -56,30 +63,28 @@ Routing::Routing()
   }
 }
 
-// bool Routing::canGo(track_node* src, track_node* dst) {
-//   if (src->status == 1) {
-//     return false;
-//   }
-//   src->status = 1;
-//   if (src == dst) {
-//     return true;
-//   }
-//   if (src->type == node_type::NODE_EXIT) {
-//     return false;
-//   }
-//   int edgeSize = src->type == node_type::NODE_BRANCH ? 2 : 1;
-//   for (int i = 0; i < edgeSize; ++i) {
-//     if (canGo(src->edge[i].dest, dst)) {
-//       return true;
-//     }
-//   }
-//   return false;
-// }
-
 void Routing::clearStatus() {
   for (int i = 0; i < trackSize; ++i) {
     track[i].status = 0;
   }
+}
+
+void Routing::updateTrainLoc(int trainId, track_node* dest, int offset) {
+  send(worldTid, Msg{Msg::Action::Depart, {trainId, dest - track, offset}, 3});
+}
+
+void Routing::handleDeparture(int trainId, int speed, int delay,
+                              bool rerouteOnSlow, bool rerouteOnStop) {
+  send(worldTid, Msg::tr(speed, trainId));
+  int tid = create(1, awaitStop);
+  assert(tid >= 0);
+  int data[5]{delay, worldTid, trainId, rerouteOnSlow, rerouteOnStop};
+  send(tid, data);
+}
+
+void Routing::setTrainBlocked(int trainId, bool blocked) {
+  log("[routing]: set train %d blocked", trainId);
+  send(worldTid, Msg{Msg::Action::SetTrainBlocked, {trainId, blocked}, 2});
 }
 
 void Routing::onDestinationSet(int* data) {
@@ -94,42 +99,58 @@ void Routing::onDestinationSet(int* data) {
   int srcOffset = data[8];
   track_node* destNode = &track[data[9]];
   int destOffset = data[10];
+  Train::Direction trainDirection = (Train::Direction)data[11];
 
   track_node* path[TRACK_MAX];
-  int dist = route(srcNode, destNode, path, false);
+  track_node* blockedSensor{nullptr};
+
+  ResvRequest req;
+  send(reservationServer, req, req);
+  int dist = route(srcNode, destNode, blockedSensor, path, trainId, req);
+  destNode = blockedSensor ? blockedSensor : destNode;
+  destOffset = blockedSensor ? -trainDirection : destOffset;
   int realDist = dist - srcOffset + destOffset;
 
-  if (dist < 0) {
-    // TODO: cannot get to destination
+  if (blockedSensor) {
+    log("[set dest]: reroute train %d, blocked sensor: %s", trainId,
+        blockedSensor->name);
+  } else {
+    log("[set dest]: reroute train %d, no blocked sensor", trainId);
+  }
+
+  if (dist < 0 || realDist <= 0 || blockedSensor == srcNode) {
+    // cannot get to destination
+    setTrainBlocked(trainId, true);
   } else if (realDist <= accelDist + stopDist) {
     // stop before reaching max speed
-    assert(realDist >= 0);
-    println(COM2, "real dist: %d, accl: %d, decl: %d", realDist, accelSlow,
-            decelSlow);
-    int acclTick = sqrt(
-        2 * realDist * 100 /
-        ((accelSlow + accelSlow * 100 / decelSlow * accelSlow / 100) / 100));
-    send(worldTid, Msg::tr(26, trainId));
-    int tid = create(1, awaitStop);
-    println(COM2, "tick: %d", acclTick);
-    int data[3]{acclTick, worldTid, trainId};
-    send(tid, data);
-  } else {
-    assert(realDist >= 0);
-    // check if there is sensor in between
-    int i = 0;
-    while (path[i] != nullptr) {
-      ++i;
+    if (!blockedSensor) {
+      // only go if not blocked
+      reserveTrack(path, trainId, req);
+      switchTurnout(path);
+      int accelTick = sqrt(
+          2 * realDist * 100 /
+          ((accelSlow + accelSlow * 100 / decelSlow * accelSlow / 100) / 100));
+      handleDeparture(trainId, 26, accelTick, false, false);
+      updateTrainLoc(trainId, destNode, destOffset);
+      log("[set dest]: real dist: %d, accl: %d, decl: %d", realDist, accelSlow,
+          decelSlow);
+      log("[set dest]: tick: %d", accelTick);
+    } else {
+      setTrainBlocked(trainId, true);
     }
-    --i;
-    int remainAcclDist = accelDist + srcOffset;
+  } else {
+    reserveTrack(path, trainId, req);
+    switchTurnout(path);
+    // check if there is sensor in between
+    int remainAccelDist = accelDist + srcOffset;
     int traveledDist = 0;
-    track_node* stopSensor = nullptr;
+    track_node* stopSensor{nullptr};
     int stopDelayDist = -1;
 
-    while (i > 0) {
+    int i = 0;
+    while (path[i + 1] != nullptr) {
       track_node* cur = path[i];
-      track_node* next = path[i - 1];
+      track_node* next = path[i + 1];
       track_edge edge;
       if (cur->edge[0].dest == next) {
         edge = cur->edge[0];
@@ -138,137 +159,40 @@ void Routing::onDestinationSet(int* data) {
         edge = cur->edge[1];
       }
 
-      if (remainAcclDist > 0) {
-        remainAcclDist -= edge.dist;
+      if (remainAccelDist > 0) {
+        remainAccelDist -= edge.dist;
       } else if (traveledDist <= dist + destOffset - stopDist) {
-        if (cur->type == NODE_SENSOR) {
+        // track B C13 broken
+        if (cur->type == NODE_SENSOR &&
+            !(trackSet == TrackSet::TrackB && cur->num == 44)) {
           stopSensor = cur;
           stopDelayDist = dist + destOffset - stopDist - traveledDist;
         }
       }
       traveledDist += edge.dist;
-      --i;
+      ++i;
     }
     if (stopSensor == nullptr) {
       // no sensor in between
-      // int acclTick = sqrt(2 * realDist * 100 /
-      //                     ((accl + accl * 100 / decl * accl / 100) / 100));
       int cruiseDelay = (realDist - accelDist - stopDist) * 100 / velocity;
-      println(COM2,
-              "total dist: %d, accelDist: %d, stopDist: %d, cruiseDist: %d",
-              realDist, accelDist, stopDist, realDist - accelDist - stopDist);
-      send(worldTid, Msg::tr(26, trainId));
-      int tid = create(1, awaitStop);
-      int data[3]{accelDelay + cruiseDelay, worldTid, trainId};
-      send(tid, data);
+      handleDeparture(trainId, 26, accelDelay + cruiseDelay,
+                      blockedSensor != nullptr, false);
+      updateTrainLoc(trainId, destNode, destOffset);
+      log("[set dest]: total dist: %d, accelDist: %d, stopDist: %d, "
+          "cruiseDist: %d",
+          realDist, accelDist, stopDist, realDist - accelDist - stopDist);
     } else {
       // has sensor in between
-      println(COM2, "%d, %d", stopSensor->num, stopDelayDist * 100 / velocity);
       trainStopSensor[trainId][0] = stopSensor->num;
       trainStopSensor[trainId][1] = stopDelayDist * 100 / velocity;
+      trainStopSensor[trainId][2] = blockedSensor != nullptr;
       send(worldTid, Msg::tr(26, trainId));
+      updateTrainLoc(trainId, destNode, destOffset);
+      log("[set dest]: %d, %d", stopSensor->num,
+          stopDelayDist * 100 / velocity);
     }
   }
 }
-
-// void Routing::onDestinationSet(int* data) {
-//   trainId = data[0];
-//   destNode = &track[data[1]];
-//   int destOffset = data[2];
-//   int stopDist = data[3];
-//   int velocity = data[4];
-//   track_node* srcNode = &track[data[5]];
-//   track_node* nextSensor = &track[data[6]];
-//   int speedLevel = data[7];
-
-//   int stopOffset = destOffset - stopDist;
-//   track_node* curNode = destNode;
-//   int stopSensorDelayDist = 0;
-//   if (stopOffset > 0) {
-//     int remainOffset = stopOffset;
-//     while (true) {
-//       if (remainOffset - curNode->edge[0].dist < 0) {
-//         break;
-//       }
-//       remainOffset -= curNode->edge[0].dist;
-//       curNode = curNode->edge[0].dest;
-//     }
-//     stopSensorDelayDist = remainOffset;
-//   } else if (stopOffset < 0) {
-//     int remainOffset = stopOffset;
-//     while (true) {
-//       int edgeIdx = 0;
-//       if (curNode->type == node_type::NODE_ENTER) {
-//         return;
-//       }
-//       if (curNode->type == node_type::NODE_MERGE) {
-//         int edge0Dist =
-//             route(srcNode, curNode->reverse->edge[0].dest->reverse, true);
-//         int edge1Dist =
-//             route(srcNode, curNode->reverse->edge[1].dest->reverse, true);
-//         edgeIdx = edge0Dist < edge1Dist ? 0 : 1;
-//       }
-//       remainOffset += curNode->reverse->edge[edgeIdx].dist;
-//       curNode = curNode->reverse->edge[edgeIdx].dest->reverse;
-//       if (remainOffset >= 0) {
-//         break;
-//       }
-//     }
-//     stopSensorDelayDist = remainOffset;
-//   }
-//   // find last sensor
-//   while (curNode->type != node_type::NODE_SENSOR) {
-//     int edgeIdx = 0;
-//     if (curNode->type == node_type::NODE_ENTER) {
-//       return;
-//     }
-//     if (curNode->type == node_type::NODE_MERGE) {
-//       int edge0Dist =
-//           route(srcNode, curNode->reverse->edge[0].dest->reverse, true);
-//       int edge1Dist =
-//           route(srcNode, curNode->reverse->edge[1].dest->reverse, true);
-//       edgeIdx = edge0Dist < edge1Dist ? 0 : 1;
-//     }
-//     stopSensorDelayDist += curNode->reverse->edge[edgeIdx].dist;
-//     curNode = curNode->reverse->edge[edgeIdx].dest->reverse;
-//   }
-//   stopSensorDelay = stopSensorDelayDist * 100 / velocity;
-//   stopSensor = curNode;
-
-//   // find last sensor that is 120 cm away
-//   int slowDownDist = 0;
-//   do {
-//     int edgeIdx = 0;
-//     if (curNode->type == node_type::NODE_ENTER) {
-//       return;
-//     }
-//     if (curNode->type == node_type::NODE_MERGE) {
-//       int edge0Dist =
-//           route(srcNode, curNode->reverse->edge[0].dest->reverse, true);
-//       int edge1Dist =
-//           route(srcNode, curNode->reverse->edge[1].dest->reverse, true);
-//       edgeIdx = edge0Dist < edge1Dist ? 0 : 1;
-//     }
-//     slowDownDist += curNode->reverse->edge[edgeIdx].dist;
-//     curNode = curNode->reverse->edge[edgeIdx].dest->reverse;
-//   } while (curNode->type != node_type::NODE_SENSOR || slowDownDist <
-//   1200000); slowDownSensor = curNode;
-
-//   if (srcNode == slowDownSensor || nextSensor == slowDownSensor) {
-//     int dist = route(srcNode, stopSensor, false);
-//     if (dist < __INT_MAX__) {
-//       send(worldTid, Msg::tr(speedLevel, trainId));
-//       send(worldTid, Msg::tr(23, trainId));
-//       routeStatus = 2;
-//     }
-//   } else {
-//     int dist = route(srcNode, slowDownSensor, false);
-//     if (dist < __INT_MAX__) {
-//       send(worldTid, Msg::tr(speedLevel, trainId));
-//       routeStatus = 1;
-//     }
-//   }
-// }
 
 int findMin(PathInfo* pathInfos, int size, track_node* track) {
   int min = __INT_MAX__;
@@ -282,10 +206,65 @@ int findMin(PathInfo* pathInfos, int size, track_node* track) {
   return minIdx;
 }
 
+int Routing::calcDist(track_node* (&path)[TRACK_MAX]) {
+  int newShortestDist = 0;
+  for (int i = 0;; ++i) {
+    track_node* cur = path[i];
+    track_node* next = path[i + 1];
+    if (!next) {
+      break;
+    }
+    int edgeIdx = cur->edge[0].dest == next ? 0 : 1;
+    newShortestDist += cur->edge[edgeIdx].dist;
+  }
+  return newShortestDist;
+}
+
+void Routing::switchTurnout(track_node* (&path)[TRACK_MAX]) {
+  for (int i = 0;; ++i) {
+    track_node* cur = path[i];
+    track_node* next = path[i + 1];
+    if (!next) {
+      break;
+    }
+    int edgeIdx = cur->edge[0].dest == next ? 0 : 1;
+    if (cur->type == NODE_BRANCH) {
+      if (edgeIdx == 0) {
+        send(worldTid, Msg::sw('S', cur->num));
+      } else {
+        send(worldTid, Msg::sw('C', cur->num));
+      }
+    }
+  }
+}
+
+void Routing::reserveTrack(track_node* (&path)[TRACK_MAX], int trainId,
+                           ResvRequest& req) {
+  for (int i = 0;; ++i) {
+    track_node* cur = path[i];
+    track_node* next = path[i + 1];
+    if (!next) {
+      break;
+    }
+    int edgeIdx = cur->edge[0].dest == next ? 0 : 1;
+    bool reserveRes = req.reserve(trainId, cur->enterSeg[edgeIdx]);
+    assert(reserveRes);
+  }
+  send(reservationServer, req);
+}
+
 int Routing::route(track_node* startNode, track_node* endNode,
-                   track_node* (&path)[TRACK_MAX], bool mock) {
+                   track_node*& blockedSensor, track_node* (&path)[TRACK_MAX],
+                   int trainId, ResvRequest& req) {
   if (startNode == endNode) {
     return 0;
+  }
+  if (!req.canReserve(trainId, startNode->enterSeg[0])) {
+    if (startNode->num == 68) {
+      log("train %d cannot reserve %d", trainId, startNode->enterSeg[0]);
+      req.print();
+    }
+    return -1;
   }
   clearStatus();
   HashTable<String, PathInfo, TRACK_MAX, 100> pathInfos;
@@ -317,10 +296,14 @@ int Routing::route(track_node* startNode, track_node* endNode,
       track_edge edge = curNode->edge[i];
       track_node* targetNode = edge.dest;
       if (!targetNode) {
-        break;
+        continue;
       }
       PathInfo* targetPathInfo = pathInfos.get(targetNode->name);
       int curDist = curPathInfo->distance + edge.dist;
+      if (!req.canReserve(trainId, curNode->enterSeg[i])) {
+        // add large weight to reserved segment
+        curDist += BLOCK_DIST;
+      }
       if (curDist < targetPathInfo->distance) {
         targetPathInfo->distance = curDist;
         targetPathInfo->parent = curNode;
@@ -334,69 +317,169 @@ int Routing::route(track_node* startNode, track_node* endNode,
   PathInfo* endPathInfo = pathInfos.get(endNode->name);
   track_node* parent = endPathInfo->parent;
   track_node* cur = endNode;
-  int shortestDist = endPathInfo->distance;
+  blockedSensor = nullptr;
   int pathIdx = 0;
   path[pathIdx++] = endNode;
   while (parent && parent != startNode) {
-    path[pathIdx++] = parent;
-    if (!mock) {
-      if (parent->type == node_type::NODE_BRANCH) {
-        if (parent->edge[DIR_STRAIGHT].dest == cur) {
-          send(worldTid, Msg::sw('S', parent->num));
-        } else {
-          send(worldTid, Msg::sw('C', parent->num));
-        }
-      }
+    int edgeIdx = 0;
+    if (parent->type == NODE_BRANCH) {
+      edgeIdx = parent->edge[0].dest == cur ? 0 : 1;
     }
+    if (parent->type == NODE_SENSOR &&
+        !req.canReserve(trainId, parent->enterSeg[edgeIdx])) {
+      blockedSensor = parent;
+    }
+    path[pathIdx++] = parent;
     cur = parent;
     PathInfo* pathInfo = pathInfos.get(cur->name);
     assert(pathInfo != nullptr);
     parent = pathInfo->parent;
   }
-  path[pathIdx++] = parent;
-  path[pathIdx++] = nullptr;
-  return parent == startNode ? shortestDist : -1;
+  path[pathIdx] = parent;
+  path[pathIdx + 1] = nullptr;
+  if (parent != startNode) {
+    if (startNode->num == 68) {
+      log("parent %s, startNode %s", parent->name, startNode->name);
+    }
+    return -1;
+  }
+
+  // reverse path
+  int l = 0;
+  int r = pathIdx;
+  while (l < r) {
+    auto temp = path[l];
+    path[l] = path[r];
+    path[r] = temp;
+    ++l;
+    --r;
+  }
+
+  // remove path after blockedSensor
+  int lastSensorIdx{-1};
+  for (int i = 0; i <= pathIdx; ++i) {
+    if (path[i]->type == NODE_SENSOR) {
+      lastSensorIdx = i;
+    }
+    if (path[i] == blockedSensor) {
+      blockedSensor = path[lastSensorIdx];
+      path[lastSensorIdx + 1] = nullptr;
+      break;
+    }
+  }
+  return calcDist(path);
+}
+
+void Routing::handleReroute(int* data) {
+  int trainId = data[0];
+  int stopDist = data[5];
+  int velocity = data[6];
+  track_node* srcNode = &track[data[7]];
+  int srcOffset = data[8];
+  track_node* destNode = &track[data[9]];
+  int destOffset = data[10];
+  Train::Direction trainDirection = (Train::Direction)data[11];
+
+  track_node* path[TRACK_MAX];
+  track_node* blockedSensor{nullptr};
+
+  ResvRequest req;
+  send(reservationServer, req, req);
+  int dist = route(srcNode, destNode, blockedSensor, path, trainId, req);
+  destNode = blockedSensor ? blockedSensor : destNode;
+  destOffset = blockedSensor ? -trainDirection : destOffset;
+  int realDist = dist - srcOffset + destOffset;
+
+  if (blockedSensor) {
+    log("[reroute]: reroute train %d, blocked sensor: %s", trainId,
+        blockedSensor->name);
+  } else {
+    log("[reroute]: reroute train %d, no blocked sensor", trainId);
+  }
+  if (dist < 0 || realDist <= 0 || blockedSensor == srcNode) {
+    // stop as usual
+    log("[reroute]: reroute train %d, dist: %d, realDist: %d, stop directly",
+        trainId, dist, realDist);
+    handleDeparture(trainId, 0, 0, false, true);
+  } else {
+    reserveTrack(path, trainId, req);
+    switchTurnout(path);
+
+    // check if there is sensor in between
+    int i = 0;
+    int traveledDist = 0;
+    track_node* stopSensor = nullptr;
+    int stopDelayDist = 0;
+    while (path[i + 1] != nullptr) {
+      track_node* cur = path[i];
+      track_node* next = path[i + 1];
+      track_edge edge;
+      if (cur->edge[0].dest == next) {
+        edge = cur->edge[0];
+      } else {
+        assert(cur->edge[1].dest == next);
+        edge = cur->edge[1];
+      }
+      if (traveledDist > dist + destOffset - stopDist) {
+        break;
+      }
+      if (cur->type == NODE_SENSOR) {
+        stopSensor = cur;
+        stopDelayDist = dist + destOffset - stopDist - traveledDist;
+      }
+      traveledDist += edge.dist;
+      ++i;
+    }
+    if (stopSensor == nullptr) {
+      // no sensor in between
+      int cruiseDelay = realDist * 100 / velocity;
+      log("[reroute]: reroute train %d, no sensor in between, cruise Delay %d",
+          trainId, cruiseDelay);
+      handleDeparture(trainId, 26, cruiseDelay, blockedSensor != nullptr,
+                      false);
+      updateTrainLoc(trainId, destNode, destOffset);
+    } else {
+      // has sensor in between
+      log("[reroute]: reroute train %d, stop sensor %s", trainId,
+          stopSensor->name);
+      trainStopSensor[trainId][0] = stopSensor->num;
+      trainStopSensor[trainId][1] = stopDelayDist * 100 / velocity;
+      trainStopSensor[trainId][2] = blockedSensor != nullptr;
+      updateTrainLoc(trainId, destNode, destOffset);
+    }
+  }
 }
 
 void Routing::run() {
   marklin::Msg msg;
+  int senderTid;
   while (true) {
-    receive(worldTid, msg);
-    reply(worldTid);
+    receive(senderTid, msg);
+    reply(senderTid);
     switch (msg.action) {
       case marklin::Msg::Action::SetDestination:
         onDestinationSet(msg.data);
         break;
+      case Msg::Action::Reroute: {
+        log("[reroute]: received reroute train %d", msg.data[0]);
+        handleReroute(msg.data);
+        break;
+      }
       case marklin::Msg::Action::SensorTriggered: {
         int sensorNum = msg.data[0];
         int trainId = msg.data[2];
-        int nextSensorNum = msg.data[3];
-        if (trainStopSensor[trainId][0] == sensorNum) {
-          if (trainStopSensor[trainId][1] == 0) {
-            send(worldTid, Msg::tr(0, trainId));
-          } else {
-            assert(trainStopSensor[trainId][1] > 0);
-            int tid = create(1, awaitStop);
-            int data[3]{trainStopSensor[trainId][1], worldTid, trainId};
-            send(tid, data);
-          }
+        int awaitSensor = trainStopSensor[trainId][0];
+        int stopDelay = trainStopSensor[trainId][1];
+        bool reroute = trainStopSensor[trainId][2];
+        if (awaitSensor == sensorNum) {
+          int tid = create(1, awaitStop);
+          assert(tid >= 0);
+          int data[5]{stopDelay, worldTid, trainId, reroute, false};
+          send(tid, data);
           trainStopSensor[trainId][0] = -1;
           trainStopSensor[trainId][1] = -1;
+          trainStopSensor[trainId][2] = -1;
         }
-        // if (routeStatus == 1) {
-        //   if (nextSensorNum == slowDownSensor->num) {
-        //     route(slowDownSensor, stopSensor, false);
-        //   } else if (sensorNum == slowDownSensor->num) {
-        //     send(worldTid, Msg::tr(23, trainId));
-        //     ++routeStatus;
-        //   }
-        // } else if (routeStatus == 2) {
-        //   if (sensorNum == stopSensor->num) {
-        //     clock::delay(stopSensorDelay);
-        //     send(worldTid, Msg::tr(0, trainId));
-        //     routeStatus = 0;
-        //   }
-        // }
         break;
       }
       default:
