@@ -44,13 +44,13 @@ void initTrains(marklin::Train *trains) {
   trains[4].accelDelay = 427;
   trains[4].stopDist = 330000;
 
-  trains[5].id = 79;
-  trains[5].velocity = 372000;
-  trains[5].accelSlow = 93000;
-  trains[5].decelSlow = 45000;
-  trains[5].accelDist = 495901;
-  trains[5].accelDelay = 330;
-  trains[5].stopDist = 490000;
+  trains[5].id = 2;
+  trains[5].velocity = 492000;
+  trains[5].accelSlow = 56000;
+  trains[5].decelSlow = 43800;
+  trains[5].accelDist = 703564;
+  trains[5].accelDelay = 427;
+  trains[5].stopDist = 670000;
 
 }
 
