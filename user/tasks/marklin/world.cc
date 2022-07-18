@@ -109,7 +109,7 @@ void World::init(TrackSet trackSet) {
   }
 
   // initialize switches
-  char switchInitA[] = "SSSSCSSSSSCSSSSSSCSCSC";
+  char switchInitA[] = "SSCSCSSSSSCSSSSSSCSCSC";
   char switchInitB[] = "SSSSCSSSSSCSSSSSSCSCCS";
   char *switchInit = trackSet == TrackSet::TrackA ? switchInitA : switchInitB;
 
