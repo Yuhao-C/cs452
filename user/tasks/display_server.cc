@@ -6,6 +6,7 @@
 #include "name_server.h"
 #include "track_data.h"
 #include "user/message.h"
+#include "marklin/train.h"
 
 namespace view {
 
@@ -94,9 +95,8 @@ void trackDataInit(int trackSet, track_node *track) {
 }
 
 void trainDisplayInit(Cursor &trainCursor) {
-  int trains[6] = {1, 24, 58, 74, 78, 79};
-  for (int i = 0; i < 6; ++i) {
-    println(COM2, "Train %2d", trains[i]);
+  for (int i = 0; i < marklin::NUM_TRAINS; ++i) {
+    println(COM2, "Train %2d", marklin::TRAIN_IDS[i]);
   }
 }
 

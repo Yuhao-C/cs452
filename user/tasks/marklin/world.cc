@@ -104,7 +104,7 @@ void World::init(TrackSet trackSet) {
   displayServerTid = whoIs(DISPLAY_SERVER_NAME);
 
   send(marklinServerTid, Msg::go());
-  for (int i = 0; i < 6; ++i) {
+  for (int i = 0; i < NUM_TRAINS; ++i) {
     send(marklinServerTid, Msg::tr(16, trains[i].id));
   }
 
@@ -199,7 +199,7 @@ void World::onSensorTrigger(const Msg &msg) {
   if (!t) {
     // no train is expected to trigger this sensor
     // this should happen only if a switch is broken
-    // for (int i = 0; i < 6; ++i) {
+    // for (int i = 0; i < NUM_TRAINS; ++i) {
     //   send(marklinServerTid, Msg::tr(0, trains[i].id));
     // }
     log("cannot find train");
@@ -257,7 +257,7 @@ void World::onSensorTrigger(const Msg &msg) {
     // may need to do something?
   }
 
-  for (int i = 0; i < 6; ++i) {
+  for (int i = 0; i < NUM_TRAINS; ++i) {
     if (trains[i].isBlocked) {
       onSetDestination(Msg{Msg::Action::SetDestination, {trains[i].id, -1}, 2});
     }
@@ -393,10 +393,10 @@ void World::onTrainDepart(const Msg &msg) {
 }
 
 Train *World::predictTrainBySensor(int sensorNum, int &offDist) {
-  track_node *expected[6];
-  int offDistances[6];
+  track_node *expected[NUM_TRAINS];
+  int offDistances[NUM_TRAINS];
 
-  for (int i = 0; i < 6; ++i) {
+  for (int i = 0; i < NUM_TRAINS; ++i) {
     Train *t = &trains[i];
     if (t->nextSensor && t->nextSensor->type == NODE_SENSOR &&
         t->nextSensor->num == sensorNum) {
@@ -407,7 +407,7 @@ Train *World::predictTrainBySensor(int sensorNum, int &offDist) {
     offDistances[i] = 0;
   }
 
-  for (int i = 0; i < 6; ++i) {
+  for (int i = 0; i < NUM_TRAINS; ++i) {
     Train *t = &trains[i];
     if (!t->isBlocked && expected[i] && expected[i]->type == NODE_SENSOR) {
       int distance;
@@ -478,7 +478,7 @@ track_node *World::findNextSensor(track_node *sensor, int &distance) {
 int World::getTrackSize() const { return trackSize; }
 
 Train *World::getTrain(int trainId) {
-  for (int i = 0; i < 6; ++i) {
+  for (int i = 0; i < NUM_TRAINS; ++i) {
     if (trains[i].id == trainId) {
       return &trains[i];
     }

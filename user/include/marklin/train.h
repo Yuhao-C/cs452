@@ -5,6 +5,10 @@
 
 namespace marklin {
 
+const int NUM_TRAINS = 6;
+
+const int TRAIN_IDS[NUM_TRAINS] = {1, 24, 58, 74, 78, 2};
+
 const int TRAIN_LENGTH = 217000;
 
 class Train {
