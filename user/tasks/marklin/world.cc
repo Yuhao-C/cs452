@@ -167,10 +167,10 @@ void World::onSetTrainLoc(const Msg &msg) {
       t->destNodeIdx, t->destOffset,
     }
   });
-  // send(displayServerTid,
-  //      view::Msg{view::Action::Predict,
-  //                {t->id, (int)t->nextSensor->name, t->nextSensorTick, 0, 0},
-  //                5});
+  send(displayServerTid,
+       view::Msg{view::Action::Predict,
+                 {t->id, (int)t->nextSensor->name, t->nextSensorTick, 0, 0, 0},
+                 6});
   // clang-format on
 }
 
@@ -205,6 +205,10 @@ void World::onSensorTrigger(const Msg &msg) {
     // }
     log("cannot find train");
     send(marklinServerTid, Msg::stop());
+    send(displayServerTid,
+       view::Msg{view::Action::Predict,
+                 {-1, (int)track[sensorNum].name, 0, 0, 0, 0},
+                 6});
     return;
   }
 
@@ -217,6 +221,10 @@ void World::onSensorTrigger(const Msg &msg) {
       // send(marklinServerTid, Msg::tr(0, t->id));
       log("cannot free t->nextSensor");
       send(marklinServerTid, Msg::stop());
+      send(displayServerTid,
+           view::Msg{view::Action::Predict,
+                     {-2, (int)track[sensorNum].name, 0, 0, 0, 0},
+                     6});
       return;
     }
     t->lastSensor = t->nextSensor;
@@ -227,6 +235,10 @@ void World::onSensorTrigger(const Msg &msg) {
     // send(marklinServerTid, Msg::tr(0, t->id));
     log("cannot free sensor");
     send(marklinServerTid, Msg::stop());
+    send(displayServerTid,
+         view::Msg{view::Action::Predict,
+                   {-3, (int)track[sensorNum].name, 0, 0, 0, 0},
+                   6});
     return;
   }
   send(resvServerTid, request);
@@ -274,11 +286,11 @@ void World::onSensorTrigger(const Msg &msg) {
       t->destNodeIdx, t->destOffset,
     }
   });
-  // send(displayServerTid,
-  //      view::Msg{view::Action::Predict,
-  //                {t->id, (int)t->nextSensor->name, t->nextSensorTick, timeDiff,
-  //                 distDiff, avgVelocity},
-  //                6});
+  send(displayServerTid,
+       view::Msg{view::Action::Predict,
+                 {t->id, (int)t->nextSensor->name, t->nextSensorTick, timeDiff,
+                  distDiff, avgVelocity},
+                 6});
   // clang-format on
 }
 
@@ -340,7 +352,7 @@ int World::onSetTrainSpeed(int senderTid, const Msg &msg) {
       }
 
       train->setSpeedLevel(Train::getSpeedLevel(cmd));
-      // log("%d", clock::time());
+      log("train %d speed %d at tick: %d", train->id, cmd, clock::time());
       send(marklinServerTid, msg);
       return 0;
     }
@@ -369,6 +381,10 @@ int World::onReverseTrain(const Msg &msg) {
         train->destNodeIdx, train->destOffset,
       }
     });
+    send(displayServerTid,
+         view::Msg{view::Action::Predict,
+                   {train->id, (int)train->nextSensor->name, 0, 0, 0, 0},
+                   6});
     // clang-format on
   }
   return 0;
