@@ -134,11 +134,12 @@ void World::onSetTrainLoc(const Msg &msg) {
   int nodeIdx = msg.data[1];
   int offset = msg.data[2];
   int direction = msg.data[3];
+  int temp;
 
   Train *t = getTrain(trainId);
   t->locNodeIdx = nodeIdx;
   t->locOffset = offset;
-  t->nextSensor = &track[nodeIdx];
+  t->nextSensor = offset <= 0 ? &track[nodeIdx] : findNextSensor(&track[nodeIdx], temp);
   t->nextSensorTick = 0;
   t->direction =
       direction == 'f' ? Train::Direction::Forward : Train::Direction::Backward;
