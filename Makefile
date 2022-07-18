@@ -43,7 +43,7 @@ LDLIBS = -lstdc++ -lc -lgcc
 CXXSRC := $(shell find . -path './test' -prune -o -name '*.cc' -print)
 ASMSRC := $(shell find . -name '*.S')
 
-all: kern/kmain.elf
+all: calibration/include/train_data.h kern/kmain.elf
 
 calibration/include/train_data.h: ./calibration/data/trains.json
 	./calibration/calib_gen.py $^ $@
@@ -58,6 +58,7 @@ clean:
 	-find . -name '*.o' -delete
 	-find . -name '*.d' -delete
 	-find . -name '*.elf' -delete
+	-rm calibration/include/train_data.h
 
 .PHONY: install
 install: all
