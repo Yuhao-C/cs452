@@ -248,6 +248,7 @@ void World::onSensorTrigger(const Msg &msg) {
   int avgVelocity = totalDistance * 100 / totalTick;
 
   int velocity = t->getVelocity();  // get pre-calibrated train speed
+  // t->velocity = avgVelocity / 8 + velocity * 7 / 8;
   int timeDiff = tick - t->nextSensorTick;
   int distDiff = velocity * timeDiff / 100000;
 
