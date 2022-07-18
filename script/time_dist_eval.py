@@ -9,13 +9,13 @@ velo = {1: 329000, 2: 492000, 24: 342000, 58: 305000, 74: 478000, 78: 267500, 79
 log = open(sys.argv[1], 'r')
 
 train = eval(log.readline())
-time = eval(log.readline())
+time_ms = eval(log.readline())
 dist_um = eval(log.readline())
 log.close()
 
 log = open(sys.argv[1], 'a')
 
-coeff = numpy.polyfit(time, dist_um, 2)
+coeff = numpy.polyfit(time_ms, dist_um, 2)
 deriv_coeff = [coeff[0] * 2, coeff[1]]
 
 log.write(f'coeff: {coeff}\n')
