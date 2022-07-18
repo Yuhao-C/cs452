@@ -80,10 +80,12 @@ void ReservationServer::onReceiveUpdate(int senderTid, ResvRequest &request) {
       segments[i] = 0;
     }
   }
+#if RESERVATION_VERBOSE
   log("Resv after update");
   for (int i = 0; i < NUM_SEGMENTS; ++i) {
     log("[Resv] seg %d: train %d times %d", i, segments[i], semaphores[i]);
   }
+#endif
 }
 
 void ReservationServer::runServer() {
