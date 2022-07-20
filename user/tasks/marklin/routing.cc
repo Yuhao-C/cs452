@@ -125,7 +125,7 @@ void Routing::onDestinationSet(int* data) {
     // stop before reaching max speed
     if (!blockedSensor) {
       // only go if not blocked
-      reserveTrack(path, trainId, req);
+      reserveTrack(path, trainId, destOffset, req);
       switchTurnout(path);
       int accelTick = sqrt(
           2 * realDist * 100 /
@@ -139,7 +139,7 @@ void Routing::onDestinationSet(int* data) {
       setTrainBlocked(trainId, true);
     }
   } else {
-    reserveTrack(path, trainId, req);
+    reserveTrack(path, trainId, destOffset, req);
     switchTurnout(path);
     // check if there is sensor in between
     int remainAccelDist = accelDist + srcOffset;
@@ -238,17 +238,20 @@ void Routing::switchTurnout(track_node* (&path)[TRACK_MAX]) {
   }
 }
 
-void Routing::reserveTrack(track_node* (&path)[TRACK_MAX], int trainId,
+void Routing::reserveTrack(track_node* (&path)[TRACK_MAX], int trainId, int offset,
                            ResvRequest& req) {
   for (int i = 0;; ++i) {
     track_node* cur = path[i];
     track_node* next = path[i + 1];
+    if (!next && offset <= 0) {
+      break;
+    }
+    int edgeIdx = (!next || cur->edge[0].dest == next) ? 0 : 1;
+    bool reserveRes = req.reserve(trainId, cur->enterSeg[edgeIdx]);
+    assert(reserveRes);
     if (!next) {
       break;
     }
-    int edgeIdx = cur->edge[0].dest == next ? 0 : 1;
-    bool reserveRes = req.reserve(trainId, cur->enterSeg[edgeIdx]);
-    assert(reserveRes);
   }
   send(reservationServer, req);
 }
@@ -402,7 +405,7 @@ void Routing::handleReroute(int* data) {
         trainId, dist, realDist);
     handleDeparture(trainId, 16, 0, false, true);
   } else {
-    reserveTrack(path, trainId, req);
+    reserveTrack(path, trainId, destOffset, req);
     switchTurnout(path);
 
     // check if there is sensor in between
