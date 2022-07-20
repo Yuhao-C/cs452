@@ -31,7 +31,7 @@ class Routing {
   int route(track_node* src, track_node* dest, track_node*& blockedSensor,
             track_node* (&path)[TRACK_MAX], int trainId, ResvRequest& req);
   void onDestinationSet(int* data);
-  void reserveTrack(track_node* (&path)[TRACK_MAX], int trainId,
+  void reserveTrack(track_node* (&path)[TRACK_MAX], int trainId, int offset,
                     ResvRequest& req);
   void switchTurnout(track_node* (&path)[TRACK_MAX]);
   void handleReroute(int* data);
