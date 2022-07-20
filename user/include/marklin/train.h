@@ -3,6 +3,9 @@
 
 #include "track_data.h"
 
+#define SPEED_MASK 15
+#define LIGHT_MASK 16
+
 namespace marklin {
 
 const int NUM_TRAINS = 6;
@@ -55,6 +58,12 @@ class Train {
   SpeedLevel getSpeedLevel() const;
   int getSpeedLevelInt() const;
   void reverseDirection();
+
+  bool hasDest() const;
+  bool isRouteDirect() const;
+  void setLoc(int nodeIdx, int offset);
+  void setDest(int nodeIdx, int offset);
+  void setVia(int nodeIdx, int offset);
 
   static SpeedLevel getSpeedLevel(int speed);
 };

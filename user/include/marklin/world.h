@@ -37,6 +37,8 @@ class World {
   Train *predictTrainBySensor(int sensorNum, int &offDist);
   bool freeSegments(track_node *sensor, Train *train, ResvRequest &request);
 
+  track_node *predictNextSensorByLoc(int nodeIdx, int offset);
+
  public:
   World();
   void run();

@@ -57,4 +57,27 @@ void Train::reverseDirection() {
                                               : Direction::Forward;
 }
 
+bool Train::hasDest() const {
+  return destNodeIdx >= 0;
+}
+
+bool Train::isRouteDirect() const {
+  return destNodeIdx == viaNodeIdx && destOffset == viaOffset;
+}
+
+void Train::setLoc(int nodeIdx, int offset) {
+  locNodeIdx = nodeIdx;
+  locOffset = offset;
+}
+
+void Train::setDest(int nodeIdx, int offset) {
+  destNodeIdx = nodeIdx;
+  destOffset = offset;
+}
+
+void Train::setVia(int nodeIdx, int offset) {
+  viaNodeIdx = nodeIdx;
+  viaOffset = offset;
+}
+
 }  // namespace marklin

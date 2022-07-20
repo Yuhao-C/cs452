@@ -134,12 +134,10 @@ void World::onSetTrainLoc(const Msg &msg) {
   int nodeIdx = msg.data[1];
   int offset = msg.data[2];
   int direction = msg.data[3];
-  int temp;
 
   Train *t = getTrain(trainId);
-  t->locNodeIdx = nodeIdx;
-  t->locOffset = offset;
-  t->nextSensor = offset <= 0 ? &track[nodeIdx] : findNextSensor(&track[nodeIdx], temp);
+  t->setLoc(nodeIdx, offset);
+  t->nextSensor = predictNextSensorByLoc(nodeIdx, offset);
   t->nextSensorTick = 0;
   t->direction =
       direction == 'f' ? Train::Direction::Forward : Train::Direction::Backward;
@@ -300,8 +298,7 @@ void World::onSetDestination(const Msg &msg) {
       msg.action == Msg::Action::Reroute ? "reroute" : "setdest", msg.data[0]);
   Train *train = getTrain(msg.data[0]);
   if (msg.data[1] != -1 && msg.action != Msg::Action::Reroute) {
-    train->destNodeIdx = msg.data[1];
-    train->destOffset = msg.data[2];
+    train->setDest(msg.data[1], msg.data[2]);
   }
   // send to routing
   // clang-format off
@@ -369,8 +366,7 @@ int World::onReverseTrain(const Msg &msg) {
     train->reverseDirection();
     train->nextSensor =
             findNextSensor(train->nextSensor->reverse, train->nextSensorDist);
-    train->locNodeIdx = track[train->locNodeIdx].reverse - track;
-    train->locOffset = -(train->locOffset - TRAIN_LENGTH);
+    train->setLoc(track[train->locNodeIdx].reverse - track, -(train->locOffset - TRAIN_LENGTH));
     send(marklinServerTid, Msg::tr(31, train->id));
     // clang-format off
     send(displayServerTid, view::Msg{
@@ -393,8 +389,7 @@ int World::onReverseTrain(const Msg &msg) {
 
 void World::onTrainDepart(const Msg &msg) {
   Train *train = getTrain(msg.data[0]);
-  train->viaNodeIdx = msg.data[1];
-  train->viaOffset = msg.data[2] + train->direction;
+  train->setVia(msg.data[1], msg.data[2] + train->direction);
   // clang-format off
   send(displayServerTid, view::Msg{
     view::Action::Train, {
@@ -404,8 +399,7 @@ void World::onTrainDepart(const Msg &msg) {
       train->destNodeIdx, train->destOffset,
     }
   });
-  train->locNodeIdx = train->viaNodeIdx;
-  train->locOffset = train->viaOffset;
+  train->setLoc(train->viaNodeIdx, train->viaOffset);
   log("train %d via %s+%d", train->id, track[train->locNodeIdx].name, train->viaOffset);
   // clang-format on
 }
@@ -464,6 +458,11 @@ bool World::freeSegments(track_node *sensor, Train *train,
     }
   }
   return true;
+}
+
+track_node *World::predictNextSensorByLoc(int nodeIdx, int offset) {
+  int temp;
+  return offset <= 0 ? &track[nodeIdx] : findNextSensor(&track[nodeIdx], temp);
 }
 
 track_node *World::getSensor(int sensorNum) { return &track[sensorNum]; }
