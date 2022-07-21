@@ -101,16 +101,35 @@ void Routing::onDestinationSet(int* data) {
   int destOffset = data[10];
   Train::Direction trainDirection = (Train::Direction)data[11];
 
-  track_node* path[TRACK_MAX];
+  track_node* path[TRACK_MAX]{nullptr};
   track_node* blockedSensor{nullptr};
 
   ResvRequest req;
   send(reservationServer, req, req);
-  int dist =
-      route(srcNode, destNode, destOffset, blockedSensor, path, trainId, req);
+  bool shouldReverse;
+  int dist = routeRv(srcNode, destNode, destOffset, blockedSensor, path,
+                     shouldReverse, trainId, req);
+  for (int i = 0; path[i]; ++i) {
+    log("path %s", path[i]->name);
+  }
+
+  if (shouldReverse) {
+    int rvNodeIdx, rvOffset;
+    int oldDestOffsetHead = destOffset + trainDirection;
+    Train::getReversedLoc(track, srcNode - track, srcOffset + trainDirection,
+                          rvNodeIdx, rvOffset);
+    trainDirection = trainDirection == Train::Direction::Forward
+                         ? Train::Direction::Backward
+                         : Train::Direction::Forward;
+    srcNode = &track[rvNodeIdx];
+    srcOffset = rvOffset - trainDirection;
+    destOffset = oldDestOffsetHead - trainDirection;
+  }
+
   destNode = blockedSensor ? blockedSensor : destNode;
   destOffset = blockedSensor ? -trainDirection : destOffset;
   int realDist = dist - srcOffset + destOffset;
+  log("train %d real dist %d", trainId, realDist);
 
   if (blockedSensor) {
     log("[set dest]: reroute train %d, blocked sensor: %s", trainId,
@@ -131,6 +150,9 @@ void Routing::onDestinationSet(int* data) {
       int accelTick = sqrt(
           2 * realDist * 100 /
           ((accelSlow + accelSlow * 100 / decelSlow * accelSlow / 100) / 100));
+      if (shouldReverse) {
+        send(worldTid, Msg::rv(trainId));
+      }
       handleDeparture(trainId, 26, accelTick, false, false);
       updateTrainLoc(trainId, destNode, destOffset);
       log("[set dest]: real dist: %d, accl: %d, decl: %d", realDist, accelSlow,
@@ -176,6 +198,9 @@ void Routing::onDestinationSet(int* data) {
     if (stopSensor == nullptr) {
       // no sensor in between
       int cruiseDelay = (realDist - accelDist - stopDist) * 100 / velocity;
+      if (shouldReverse) {
+        send(worldTid, Msg::rv(trainId));
+      }
       handleDeparture(trainId, 26, accelDelay + cruiseDelay,
                       blockedSensor != nullptr, false);
       updateTrainLoc(trainId, destNode, destOffset);
@@ -187,6 +212,9 @@ void Routing::onDestinationSet(int* data) {
       trainStopSensor[trainId][0] = stopSensor->num;
       trainStopSensor[trainId][1] = stopDelayDist * 100 / velocity;
       trainStopSensor[trainId][2] = blockedSensor != nullptr;
+      if (shouldReverse) {
+        send(worldTid, Msg::rv(trainId));
+      }
       send(worldTid, Msg::tr(26, trainId));
       updateTrainLoc(trainId, destNode, destOffset);
       log("[set dest]: %d, %d", stopSensor->num,
@@ -249,8 +277,10 @@ void Routing::reserveTrack(track_node* (&path)[TRACK_MAX], int trainId,
     }
     int edgeIdx = (!next || cur->edge[0].dest == next) ? 0 : 1;
     log("reserve seg %d", cur->enterSeg[edgeIdx]);
-    bool reserveRes = req.reserve(trainId, cur->enterSeg[edgeIdx]);
-    assert(reserveRes);
+    if (!(i == 0 && req.isReservedBy(trainId, cur->enterSeg[edgeIdx]))) {
+      bool reserveRes = req.reserve(trainId, cur->enterSeg[edgeIdx]);
+      assert(reserveRes);
+    }
     if (!next) {
       break;
     }
@@ -261,7 +291,18 @@ void Routing::reserveTrack(track_node* (&path)[TRACK_MAX], int trainId,
 int Routing::route(track_node* startNode, track_node* endNode, int destOffset,
                    track_node*& blockedSensor, track_node* (&path)[TRACK_MAX],
                    int trainId, ResvRequest& req) {
+  int temp;
+  return route(startNode, endNode, destOffset, blockedSensor, path, temp,
+               trainId, req);
+}
+
+int Routing::route(track_node* startNode, track_node* endNode, int destOffset,
+                   track_node*& blockedSensor, track_node* (&path)[TRACK_MAX],
+                   int& totalDist, int trainId, ResvRequest& req) {
   if (startNode == endNode) {
+    path[0] = startNode;
+    path[1] = nullptr;
+    totalDist = 0;
     return 0;
   }
   if (!req.canReserve(trainId, startNode->enterSeg[0])) {
@@ -269,6 +310,8 @@ int Routing::route(track_node* startNode, track_node* endNode, int destOffset,
       log("train %d cannot reserve %d", trainId, startNode->enterSeg[0]);
       req.print();
     }
+    path[0] = nullptr;
+    totalDist = __INT_MAX__;
     return -1;
   }
   clearStatus();
@@ -349,9 +392,12 @@ int Routing::route(track_node* startNode, track_node* endNode, int destOffset,
   path[pathIdx] = parent;
   path[pathIdx + 1] = nullptr;
   if (parent != startNode) {
+    // no path
     if (startNode->num == 68) {
       log("parent %s, startNode %s", parent->name, startNode->name);
     }
+    path[0] = nullptr;
+    totalDist = __INT_MAX__;
     return -1;
   }
 
@@ -365,6 +411,8 @@ int Routing::route(track_node* startNode, track_node* endNode, int destOffset,
     ++l;
     --r;
   }
+
+  totalDist = calcDist(path);
 
   // remove path after blockedSensor
   int lastSensorIdx{-1};
@@ -381,6 +429,52 @@ int Routing::route(track_node* startNode, track_node* endNode, int destOffset,
   return calcDist(path);
 }
 
+int Routing::routeRv(track_node* startNode, track_node* endNode, int destOffset,
+                     track_node*& blockedSensor, track_node* (&path)[TRACK_MAX],
+                     bool& shouldReverse, int trainId, ResvRequest& req) {
+  shouldReverse = false;
+
+  int fwTotalDist = __INT_MAX__;
+  track_node* fwBlockedSensor{nullptr};
+  track_node* fwPath[TRACK_MAX]{nullptr};
+  int fwDist = route(startNode, endNode, destOffset, fwBlockedSensor, fwPath,
+                     fwTotalDist, trainId, req);
+  log("fwBlock: %s", fwBlockedSensor ? fwBlockedSensor->name : "null");
+  // if (!fwBlockedSensor) {
+  //   blockedSensor = fwBlockedSensor;
+  //   return fwDist;
+  // }
+
+  int bwTotalDist = __INT_MAX__;
+  track_node* bwBlockedSensor{nullptr};
+  track_node* bwPath[TRACK_MAX]{nullptr};
+  int bwDist = route(startNode->reverse, endNode, destOffset, bwBlockedSensor,
+                     bwPath, bwTotalDist, trainId, req);
+  log("bwBlock: %s", bwBlockedSensor ? bwBlockedSensor->name : "null");
+  // if (!bwBlockedSensor) {
+  //   blockedSensor = bwBlockedSensor;
+  //   shouldReverse = true;
+  //   return bwDist;
+  // }
+
+  if (fwTotalDist <= bwTotalDist) {
+    log("should not reverse");
+    blockedSensor = fwBlockedSensor;
+    for (int i = 0; i < TRACK_MAX; ++i) {
+      path[i] = fwPath[i];
+    }
+    return fwDist;
+  } else {
+    log("should reverse");
+    blockedSensor = bwBlockedSensor;
+    for (int i = 0; i < TRACK_MAX; ++i) {
+      path[i] = bwPath[i];
+    }
+    shouldReverse = true;
+    return bwDist;
+  }
+}
+
 void Routing::handleReroute(int* data) {
   int trainId = data[0];
   int stopDist = data[5];
@@ -391,7 +485,7 @@ void Routing::handleReroute(int* data) {
   int destOffset = data[10];
   Train::Direction trainDirection = (Train::Direction)data[11];
 
-  track_node* path[TRACK_MAX];
+  track_node* path[TRACK_MAX]{nullptr};
   track_node* blockedSensor{nullptr};
 
   ResvRequest req;

@@ -52,14 +52,15 @@ Train::SpeedLevel Train::getSpeedLevel(int speed) {
   }
 }
 
-void Train::reverseDirection() {
+void Train::reverseDirection(track_node *track) {
   direction = direction == Direction::Forward ? Direction::Backward
                                               : Direction::Forward;
+  int rvNodeIdx, rvOffset;
+  getReversedLoc(track, locNodeIdx, locOffset, rvNodeIdx, rvOffset);
+  setLoc(rvNodeIdx, rvOffset);
 }
 
-bool Train::hasDest() const {
-  return destNodeIdx >= 0;
-}
+bool Train::hasDest() const { return destNodeIdx >= 0; }
 
 bool Train::isRouteDirect() const {
   return destNodeIdx == viaNodeIdx && destOffset == viaOffset;
@@ -78,6 +79,12 @@ void Train::setDest(int nodeIdx, int offset) {
 void Train::setVia(int nodeIdx, int offset) {
   viaNodeIdx = nodeIdx;
   viaOffset = offset;
+}
+
+void Train::getReversedLoc(const track_node *track, int locNodeIdx,
+                           int locOffset, int &rvNodeIdx, int &rvOffset) {
+  rvNodeIdx = track[locNodeIdx].reverse - track;
+  rvOffset = -(locOffset - TRAIN_LENGTH);
 }
 
 }  // namespace marklin

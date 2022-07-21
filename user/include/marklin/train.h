@@ -57,7 +57,7 @@ class Train {
   int getStopDist() const;
   SpeedLevel getSpeedLevel() const;
   int getSpeedLevelInt() const;
-  void reverseDirection();
+  void reverseDirection(track_node *track);
 
   bool hasDest() const;
   bool isRouteDirect() const;
@@ -66,6 +66,7 @@ class Train {
   void setVia(int nodeIdx, int offset);
 
   static SpeedLevel getSpeedLevel(int speed);
+  static void getReversedLoc(const track_node *track, int locNodeIdx, int locOffset, int &rvNodeIdx, int &rvOffset);
 };
 }  // namespace marklin
 
