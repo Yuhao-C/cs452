@@ -220,10 +220,10 @@ void renderTrain(Cursor &cursor, int *data, track_node *track) {
 
   // clang-format off
   const char *statusStr[4] = {
-    "           at",
+    "stationary at",
     "departed from",
     "       passed",
-    "           at"
+    "   waiting at"
   };
   // clang-format on
   cursor.setC(10);

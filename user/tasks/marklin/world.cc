@@ -88,6 +88,9 @@ void World::run() {
       case Msg::Action::SetTrainBlocked:
         getTrain(msg.data[0])->isBlocked = msg.data[1];
         break;
+      case Msg::Action::TrainStopped:
+        onTrainStop(getTrain(msg.data[0]));
+        break;
     }
   }
 }
@@ -330,6 +333,8 @@ void World::onSetDestination(const Msg &msg) {
 int World::onSetTrainSpeed(int senderTid, const Msg &msg) {
   Train *train = getTrain(msg.data[1]);
   int cmd = msg.data[0];
+  int speed = cmd & SPEED_MASK;
+  int light = cmd & LIGHT_MASK;
   if (0 <= cmd && cmd <= 31) {
     if (!train->isReversing || senderTid == train->reverseTid) {
       // perform action on reverse
@@ -347,10 +352,13 @@ int World::onSetTrainSpeed(int senderTid, const Msg &msg) {
         //                5});
       } else if (cmd == 10 || cmd == 26) {
         train->isBlocked = false;
+      } else if (speed == 0) {
+        log("stop train %d", train->id);
+        delaySend(myTid(), Msg{Msg::Action::TrainStopped, {train->id}, 1}, 400);
       }
 
       train->setSpeedLevel(Train::getSpeedLevel(cmd));
-      log("train %d speed %d at tick: %d", train->id, cmd, clock::time());
+      log("train %d speed %d light %d at tick: %d", train->id, cmd & 15, cmd & 16, clock::time());
       send(marklinServerTid, msg);
       return 0;
     }
@@ -402,6 +410,32 @@ void World::onTrainDepart(const Msg &msg) {
   train->setLoc(train->viaNodeIdx, train->viaOffset);
   log("train %d via %s+%d", train->id, track[train->locNodeIdx].name, train->viaOffset);
   // clang-format on
+}
+
+void World::onTrainStop(Train *train) {
+  log("train %d stopped", train->id);
+  if (train->hasDest() && train->isRouteDirect()) {
+    // arrived at dest
+    log("train %d arrived at %s+%d", train->id, track[train->destNodeIdx].name, train->destOffset);
+    // clang-format off
+    send(displayServerTid, view::Msg{
+      view::Action::Train, {
+        train - trains,
+        view::TrainStatus::Stationary,
+        train->locNodeIdx, train->locOffset,
+        train->viaNodeIdx, train->viaOffset,
+        train->destNodeIdx, train->destOffset,
+      }
+    });
+    // clang-format on
+    train->setVia(-1, 0);
+    train->setDest(-1, 0);
+    track_node *predictedNext = predictNextSensorByLoc(train->locNodeIdx, train->locOffset);
+    if (predictedNext != train->nextSensor) {
+      // skipped a sensor
+      train->nextSensor = predictedNext;
+    }
+  }
 }
 
 Train *World::predictTrainBySensor(int sensorNum, int &offDist) {

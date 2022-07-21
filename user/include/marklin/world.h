@@ -33,6 +33,7 @@ class World {
   int onReverseTrain(const Msg &msg);
   void onSetTrainLoc(const Msg &msg);
   void onTrainDepart(const Msg &msg);
+  void onTrainStop(Train *train);
 
   Train *predictTrainBySensor(int sensorNum, int &offDist);
   bool freeSegments(track_node *sensor, Train *train, ResvRequest &request);

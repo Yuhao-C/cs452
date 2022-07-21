@@ -20,6 +20,7 @@ struct Msg {
     Reroute,          // data = {trainId}
     Depart,           // data = {trainId, nodeIndex, offset}
     SetTrainBlocked,  // data = {trainId, blocked}
+    TrainStopped,     // data = {trainId}
   };
   Action action;
   int data[12];
