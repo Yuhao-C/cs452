@@ -28,7 +28,7 @@ class Routing {
   int trainStopSensor[80][3];
 
   void clearStatus();
-  int route(track_node* src, track_node* dest, track_node*& blockedSensor,
+  int route(track_node* src, track_node* dest, int destOffset, track_node*& blockedSensor,
             track_node* (&path)[TRACK_MAX], int trainId, ResvRequest& req);
   void onDestinationSet(int* data);
   void reserveTrack(track_node* (&path)[TRACK_MAX], int trainId, int offset,

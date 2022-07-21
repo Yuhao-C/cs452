@@ -106,7 +106,7 @@ void Routing::onDestinationSet(int* data) {
 
   ResvRequest req;
   send(reservationServer, req, req);
-  int dist = route(srcNode, destNode, blockedSensor, path, trainId, req);
+  int dist = route(srcNode, destNode, destOffset, blockedSensor, path, trainId, req);
   destNode = blockedSensor ? blockedSensor : destNode;
   destOffset = blockedSensor ? -trainDirection : destOffset;
   int realDist = dist - srcOffset + destOffset;
@@ -256,7 +256,7 @@ void Routing::reserveTrack(track_node* (&path)[TRACK_MAX], int trainId, int offs
   send(reservationServer, req);
 }
 
-int Routing::route(track_node* startNode, track_node* endNode,
+int Routing::route(track_node* startNode, track_node* endNode, int destOffset,
                    track_node*& blockedSensor, track_node* (&path)[TRACK_MAX],
                    int trainId, ResvRequest& req) {
   if (startNode == endNode) {
@@ -321,6 +321,9 @@ int Routing::route(track_node* startNode, track_node* endNode,
   track_node* parent = endPathInfo->parent;
   track_node* cur = endNode;
   blockedSensor = nullptr;
+  if (destOffset > 0 && cur->type == NODE_SENSOR && !req.canReserve(trainId, cur->enterSeg[0])) {
+    blockedSensor = cur;
+  }
   int pathIdx = 0;
   path[pathIdx++] = endNode;
   while (parent && parent != startNode) {
@@ -388,7 +391,7 @@ void Routing::handleReroute(int* data) {
 
   ResvRequest req;
   send(reservationServer, req, req);
-  int dist = route(srcNode, destNode, blockedSensor, path, trainId, req);
+  int dist = route(srcNode, destNode, destOffset, blockedSensor, path, trainId, req);
   destNode = blockedSensor ? blockedSensor : destNode;
   destOffset = blockedSensor ? -trainDirection : destOffset;
   int realDist = dist - srcOffset + destOffset;
