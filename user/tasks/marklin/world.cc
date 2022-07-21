@@ -21,20 +21,6 @@ void runWorld() {
   world.run();
 }
 
-void reverseWorker() {
-  int worldTid, speed, trainId;
-  Msg msg;
-  receive(worldTid, msg);
-  reply(worldTid);
-  speed = msg.data[0];
-  trainId = msg.data[1];
-
-  send(worldTid, Msg::tr(16, trainId));
-  clock::delay(400);
-  send(worldTid, Msg::tr(31, trainId));
-  send(worldTid, Msg::tr(speed | 16, trainId));
-}
-
 World::World()
     : trackSet{TrackSet::Unknown},
       trackSize{0},
@@ -207,9 +193,9 @@ void World::onSensorTrigger(const Msg &msg) {
     log("cannot find train");
     send(marklinServerTid, Msg::stop());
     send(displayServerTid,
-       view::Msg{view::Action::Predict,
-                 {-1, (int)track[sensorNum].name, 0, 0, 0, 0},
-                 6});
+         view::Msg{view::Action::Predict,
+                   {-1, (int)track[sensorNum].name, 0, 0, 0, 0},
+                   6});
     return;
   }
 
@@ -333,48 +319,59 @@ void World::onSetDestination(const Msg &msg) {
 int World::onSetTrainSpeed(int senderTid, const Msg &msg) {
   Train *train = getTrain(msg.data[1]);
   int cmd = msg.data[0];
-  int speed = cmd & SPEED_MASK;
-  int light = cmd & LIGHT_MASK;
   if (0 <= cmd && cmd <= 31) {
-    if (!train->isReversing || senderTid == train->reverseTid) {
-      // perform action on reverse
-      if (cmd == 15 || cmd == 31) {
-        // TODO: need to check NODE_EXIT
-        train->nextSensor =
-            findNextSensor(train->nextSensor->reverse, train->nextSensorDist);
-        train->isReversing = false;
-        train->reverseDirection();
+    // speed command, check if it is valid
+    // if (train->hasDest() && senderTid != routingServerTid) {
+    //   log("train %d in route, manual speed change discarded", train->id);
+    //   return -1;
+    // }
 
-        // send to display server TODO: handle reverse
-        // send(displayServerTid,
-        //      view::Msg{view::Action::Predict,
-        //                {train->id, (int)train->nextSensor->name, 0, 0, 0},
-        //                5});
-      } else if (cmd == 10 || cmd == 26) {
-        train->isBlocked = false;
-      } else if (speed == 0) {
+    int speed = cmd & SPEED_MASK;
+    int light = cmd & LIGHT_MASK;
+
+    if (speed == 15) {
+      // ignore reverse command in the form of tr command
+      return -2;
+    } else if (speed == 0) {
+      // stop train
+      if (train->getSpeedLevelInt() != 0) {
         log("stop train %d", train->id);
         delaySend(myTid(), Msg{Msg::Action::TrainStopped, {train->id}, 1}, 400);
       }
+    } else {
+      if (senderTid == routingServerTid) {
+        // train departs by routing, unblock the train
+        train->isBlocked = false;
+      } else {
+        // train departs manually
+        if (speed != 10) {
+          // only allow speed 10 for manual control
+          return -3;
+        }
 
-      train->setSpeedLevel(Train::getSpeedLevel(cmd));
-      log("train %d speed %d light %d at tick: %d", train->id, cmd & 15, cmd & 16, clock::time());
-      send(marklinServerTid, msg);
-      return 0;
+        // try to reserve track
+        // manualDepartReserve(train);
+      }
     }
-    return 1;
+
+    train->setSpeedLevel(Train::getSpeedLevel(cmd));
+    log("train %d speed %d light %d at tick %d", train->id, cmd & 15, cmd & 16,
+        clock::time());
+    send(marklinServerTid, msg);
+  } else {
+    // not a speed command, can send directly
+    send(marklinServerTid, msg);
   }
-  send(marklinServerTid, msg);
   return 0;
 }
 
 int World::onReverseTrain(const Msg &msg) {
   Train *train = getTrain(msg.data[1]);
   if (train->getSpeedLevel() == Train::SpeedLevel::Zero) {
-    train->reverseDirection();
+    log("reverse train %d", train->id);
+    train->reverseDirection(track);
     train->nextSensor =
-            findNextSensor(train->nextSensor->reverse, train->nextSensorDist);
-    train->setLoc(track[train->locNodeIdx].reverse - track, -(train->locOffset - TRAIN_LENGTH));
+        predictNextSensorByLoc(train->locNodeIdx, train->locOffset);
     send(marklinServerTid, Msg::tr(31, train->id));
     // clang-format off
     send(displayServerTid, view::Msg{
@@ -416,7 +413,9 @@ void World::onTrainStop(Train *train) {
   log("train %d stopped", train->id);
   if (train->hasDest() && train->isRouteDirect()) {
     // arrived at dest
-    log("train %d arrived at %s+%d", train->id, track[train->destNodeIdx].name, train->destOffset);
+    log("train %d arrived at %s+%d", train->id, track[train->destNodeIdx].name,
+        train->destOffset);
+
     // clang-format off
     send(displayServerTid, view::Msg{
       view::Action::Train, {
@@ -428,12 +427,39 @@ void World::onTrainStop(Train *train) {
       }
     });
     // clang-format on
+
+    // clear via and dest
     train->setVia(-1, 0);
     train->setDest(-1, 0);
-    track_node *predictedNext = predictNextSensorByLoc(train->locNodeIdx, train->locOffset);
+    track_node *predictedNext =
+        predictNextSensorByLoc(train->locNodeIdx, train->locOffset);
     if (predictedNext != train->nextSensor) {
       // skipped a sensor
       train->nextSensor = predictedNext;
+    }
+  }
+}
+
+bool World::manualDepartReserve(Train *train) {
+  // TODO
+  int resvServer = whoIs(RESERVATION_SERVER_NAME);
+  ResvRequest req;
+  send(resvServer, req, req);
+  int dist = 0;
+  track_node *cur = train->nextSensor;
+  while (dist < train->getStopDist()) {
+    if (cur->type == NODE_SENSOR || cur->type == NODE_NONE) {
+      if (req.canReserve(train->id, cur->enterSeg[0])) {
+        dist += cur->edge[0].dist;
+        cur = cur->edge[0].dest;
+      } else {
+        break;
+      }
+    } else if (cur->type == NODE_BRANCH) {
+      if (req.canReserve(train->id, cur->enterSeg[cur->status])) {
+        dist += cur->edge[cur->status].dist;
+        cur = cur->edge[cur->status].dest;
+      }
     }
   }
 }

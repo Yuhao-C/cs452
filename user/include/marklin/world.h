@@ -35,6 +35,8 @@ class World {
   void onTrainDepart(const Msg &msg);
   void onTrainStop(Train *train);
 
+  bool manualDepartReserve(Train *train);
+
   Train *predictTrainBySensor(int sensorNum, int &offDist);
   bool freeSegments(track_node *sensor, Train *train, ResvRequest &request);
 
