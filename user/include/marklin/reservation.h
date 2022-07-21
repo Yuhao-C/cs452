@@ -18,6 +18,7 @@ class ResvRequest {
  public:
   ResvRequest();
   bool canReserve(int trainId, int segId) const;
+  bool isReservedBy(int trainId, int segId) const;
   bool reserve(int trainId, int segId);
   bool free(int trainId, int segId);
   void print();

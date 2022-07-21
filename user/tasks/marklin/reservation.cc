@@ -18,6 +18,13 @@ bool ResvRequest::canReserve(int trainId, int segId) const {
   return segments[segId] == 0 || segments[segId] == trainId;
 }
 
+bool ResvRequest::isReservedBy(int trainId, int segId) const {
+  if (segId == -1) {
+    return false;
+  }
+  return segments[segId] == trainId;
+}
+
 bool ResvRequest::reserve(int trainId, int segId) {
   if (segId == -1) {
     return true;
