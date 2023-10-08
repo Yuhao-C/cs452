@@ -1,4 +1,4 @@
-# CS452 Kernel
+# CS452 Real-Time Microkernel
 
 - [CS452 Kernel](#cs452-kernel)
   - [Group Member](#group-member)
